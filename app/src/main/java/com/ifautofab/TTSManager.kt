@@ -8,16 +8,28 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = TextToSpeech(context, this)
     private var isReady = false
 
+    private val pendingMessages = mutableListOf<String>()
+
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale.US
             isReady = true
+            synchronized(pendingMessages) {
+                pendingMessages.forEach { speak(it) }
+                pendingMessages.clear()
+            }
         }
     }
 
     fun speak(text: String) {
-        if (isReady && text.isNotBlank()) {
+        if (text.isBlank()) return
+        
+        if (isReady) {
             tts?.speak(text, TextToSpeech.QUEUE_ADD, null, text.hashCode().toString())
+        } else {
+            synchronized(pendingMessages) {
+                pendingMessages.add(text)
+            }
         }
     }
 
