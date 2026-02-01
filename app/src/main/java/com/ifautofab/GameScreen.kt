@@ -8,7 +8,7 @@ import androidx.lifecycle.LifecycleOwner
 
 class GameScreen(carContext: CarContext) : Screen(carContext) {
 
-    private var gameOutput = "Welcome to IFAutoFab.\nSelect a game on your phone to begin."
+    private val history = mutableListOf<String>()
 
     init {
         // Observe output from the interceptor
@@ -24,7 +24,13 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
 
         val newText = TextOutputInterceptor.awaitNewText(100)
         if (newText != null) {
-            gameOutput = TextOutputInterceptor.getFullOutput()
+            // Split by double newlines to treat as paragraphs
+            val paragraphs = newText.split("\n\n")
+            synchronized(history) {
+                paragraphs.forEach { if (it.isNotBlank()) history.add(it.trim()) }
+                // Keep only last 50 paragraphs
+                while (history.size > 50) history.removeAt(0)
+            }
             invalidate()
         }
         
@@ -35,19 +41,51 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     override fun onGetTemplate(): Template {
-        val row = Row.Builder()
-            .setTitle("Game Output")
-            .addText(gameOutput)
-            .build()
+        val listBuilder = ItemList.Builder()
+        
+        synchronized(history) {
+            if (history.isEmpty()) {
+                listBuilder.addItem(
+                    Row.Builder()
+                        .setTitle("No output yet")
+                        .addText("Select a game on your phone to begin.")
+                        .build()
+                )
+            } else {
+                history.forEach { para ->
+                    listBuilder.addItem(
+                        Row.Builder()
+                            .setTitle(para)
+                            .build()
+                    )
+                }
+            }
+        }
 
-        val list = ItemList.Builder()
-            .addItem(row)
+        val actionStrip = ActionStrip.Builder()
+            .addAction(
+                Action.Builder()
+                    .setTitle("Commands")
+                    .setOnClickListener {
+                        screenManager.push(CommandScreen(carContext))
+                    }
+                    .build()
+            )
+            .addAction(
+                Action.Builder()
+                    .setTitle("Voice")
+                    .setOnClickListener {
+                        screenManager.push(VoiceInputScreen(carContext))
+                    }
+                    .build()
+            )
             .build()
 
         return ListTemplate.Builder()
-            .setSingleList(list)
+            .setSingleList(listBuilder.build())
             .setTitle("IFAutoFab")
             .setHeaderAction(Action.APP_ICON)
+            .setActionStrip(actionStrip)
             .build()
     }
 }

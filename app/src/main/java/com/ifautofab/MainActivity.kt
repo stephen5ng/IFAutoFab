@@ -5,7 +5,9 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -44,6 +46,10 @@ class MainActivity : AppCompatActivity() {
             pickFileLauncher.launch("*/*")
         }
 
+        findViewById<Switch>(R.id.ttsSwitch).setOnCheckedChangeListener { _, isChecked ->
+            GLKGameEngine.isTtsEnabled = isChecked
+        }
+
         findViewById<Button>(R.id.sendButton).setOnClickListener {
             val command = inputText.text.toString()
             if (command.isNotEmpty()) {
@@ -52,7 +58,33 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        setupBundledGames()
         startOutputPolling()
+    }
+
+    private fun setupBundledGames() {
+        val container = findViewById<LinearLayout>(R.id.bundledGamesContainer)
+        val games = assets.list("games") ?: emptyArray()
+        games.forEach { assetName ->
+            val btn = Button(this).apply {
+                text = assetName.removeSuffix(".z3").uppercase()
+                setOnClickListener {
+                    launchBundledGame(assetName)
+                }
+            }
+            container.addView(btn)
+        }
+    }
+
+    private fun launchBundledGame(assetName: String) {
+        val file = File(cacheDir, assetName)
+        assets.open("games/$assetName").use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        }
+        GLKGameEngine.startGame(application, file.absolutePath)
+        outputText.append("\nStarting bundled game: $assetName\n")
     }
 
     private fun startOutputPolling() {

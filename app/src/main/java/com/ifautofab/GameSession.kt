@@ -6,6 +6,10 @@ import androidx.car.app.Screen
 
 class GameSession : Session() {
     override fun onCreateScreen(intent: Intent): Screen {
-        return GameScreen(carContext)
+        return if (GLKGameEngine.isRunning()) {
+            GameScreen(carContext)
+        } else {
+            GameSelectionScreen(carContext)
+        }
     }
 }

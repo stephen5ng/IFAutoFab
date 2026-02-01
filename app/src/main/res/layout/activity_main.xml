@@ -42,10 +42,32 @@
             android:text="Send" />
     </LinearLayout>
 
+    <Switch
+        android:id="@+id/ttsSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable Text-to-Speech"
+        android:checked="true"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Bundled Games"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:id="@+id/bundledGamesContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
     <Button
         android:id="@+id/pickFileButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Pick Game File" />
+        android:text="Pick External Game File" />
 
 </LinearLayout>

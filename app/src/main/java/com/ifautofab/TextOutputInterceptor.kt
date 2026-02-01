@@ -10,12 +10,26 @@ object TextOutputInterceptor {
     private val outputQueue = LinkedBlockingQueue<String>()
     private val fullOutput = StringBuilder()
 
+    private var statusLine: String = ""
+
     fun appendText(text: String) {
         if (text.isEmpty()) return
         synchronized(fullOutput) {
             fullOutput.append(text)
         }
         outputQueue.offer(text)
+    }
+
+    fun updateStatusLine(text: String) {
+        synchronized(this) {
+            statusLine = text
+        }
+    }
+
+    fun getStatusLine(): String {
+        synchronized(this) {
+            return statusLine
+        }
     }
 
     /**

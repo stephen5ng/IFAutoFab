@@ -92,8 +92,13 @@ git diff 533e41b HEAD -- app/src/main/java/com/luxlunae/glk/
 - [x] layout/activity_main.xml - Phone layout
 - [x] MyCarAppService/GameSession/GameScreen - Car service scaffold
 - [x] AndroidManifest.xml - Car service entries
-- [ ] Refine GameScreen UI (ListTemplate improvements)
-- [ ] Add Voice Input/Output support (Phase 6?)
+- [x] Refine GameScreen UI (Paragraph-based ListTemplate)
+- [x] Add CommandScreen for common IF actions
+- [x] Add VoiceInputScreen (using SearchTemplate)
+- [x] Add TTSManager for voice output
+- [ ] Implement robust error handling for native crashes
+- [ ] Add Voice Input/Output support (Integrated) ✅
+- [ ] Refine session persistence (Save/Restore)
 
 
 **Architecture**:

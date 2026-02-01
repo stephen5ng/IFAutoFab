@@ -17,12 +17,15 @@ object GLKGameEngine {
     private var model: GLKModel? = null
     private var lastTextLength = 0
     private var workerThread: Thread? = null
+    private var ttsManager: TTSManager? = null
+    var isTtsEnabled: Boolean = true
 
     fun startGame(application: Application, gamePath: String) {
         if (workerThread != null && workerThread!!.isAlive) {
             return // Already running
         }
 
+        ttsManager = TTSManager(application)
         val gameFile = File(gamePath)
         if (!gameFile.exists()) {
             throw IllegalArgumentException("Game file not found: $gamePath")
@@ -43,8 +46,11 @@ object GLKGameEngine {
             if (window is GLKTextBufferM) {
                 val buffer = window.getBuffer()
                 if (buffer.length > lastTextLength) {
-                    val newText = buffer.substring(lastTextLength)
+                    val newText = buffer.substring(lastTextLength).toString()
                     TextOutputInterceptor.appendText(newText)
+                    if (isTtsEnabled) {
+                        ttsManager?.speak(newText)
+                    }
                     lastTextLength = buffer.length
                 }
             }
