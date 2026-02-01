@@ -66,6 +66,29 @@ class MainActivity : AppCompatActivity() {
                 inputText.setText("")
             }
         }
+        
+        val voiceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                val data = result.data
+                val matches = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                if (!matches.isNullOrEmpty()) {
+                    val command = matches[0]
+                    GLKGameEngine.sendInput(command)
+                }
+            }
+        }
+
+        findViewById<Button>(R.id.voiceInputButton).setOnClickListener {
+            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak command...")
+            }
+            try {
+                voiceLauncher.launch(intent)
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(this, "Speech recognition not available", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
 
         setupBundledGames()
         startOutputPolling()
