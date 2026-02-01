@@ -21,6 +21,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".GameSelectionActivity"
+            android:exported="false"
+            android:label="Select Game" />
+
         <service
             android:name=".MyCarAppService"
             android:exported="true">

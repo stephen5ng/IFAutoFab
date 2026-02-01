@@ -90,42 +90,4 @@
             style="?android:attr/buttonBarButtonStyle" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/gameSelectionLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <Button
-            android:id="@+id/cancelSelectionButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:text="Cancel"
-            android:visibility="gone"
-            style="?android:attr/buttonBarButtonStyle" />
-
-
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Bundled Games"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:id="@+id/bundledGamesContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <Button
-            android:id="@+id/pickFileButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Pick External Game File" />
-    </LinearLayout>
-
 </LinearLayout>

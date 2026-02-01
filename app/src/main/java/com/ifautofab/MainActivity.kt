@@ -24,13 +24,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var inputText: EditText
     private lateinit var scrollView: ScrollView
 
-    private val pickFileLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val file = copyUriToInternalStorage(it)
-            if (file != null) {
-                GLKGameEngine.startGame(application, file.absolutePath)
-                showRunningGameUI()
-                outputText.append("\nStarting game: ${file.name}\n")
+    private val gameSelectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val path = result.data?.getStringExtra("game_path")
+            val name = result.data?.getStringExtra("game_name")
+            if (path != null) {
+                GLKGameEngine.startGame(application, path)
+                outputText.append("\nStarting game: $name\n")
             }
         }
     }
@@ -43,9 +43,7 @@ class MainActivity : AppCompatActivity() {
         inputText = findViewById(R.id.inputText)
         scrollView = findViewById(R.id.scrollView)
 
-        findViewById<Button>(R.id.pickFileButton).setOnClickListener {
-            pickFileLauncher.launch("*/*")
-        }
+
         
         val textInputContainer = findViewById<LinearLayout>(R.id.textInputContainer)
         val keyboardToggle = findViewById<Button>(R.id.keyboardToggle)
@@ -62,18 +60,10 @@ class MainActivity : AppCompatActivity() {
             GLKGameEngine.isTtsEnabled = isChecked
         }
         
-        val gameSelectionLayout = findViewById<LinearLayout>(R.id.gameSelectionLayout)
         val newGameButton = findViewById<Button>(R.id.newGameButton)
-        
         newGameButton.setOnClickListener {
-            gameSelectionLayout.visibility = android.view.View.VISIBLE
-            findViewById<Button>(R.id.cancelSelectionButton).visibility = android.view.View.VISIBLE
-            // Don't hide the menu button in new layout, or if we do, we need to bring it back
-            // In the consolidated bar, we probably want to keep it visible or maybe disable it
-        }
-        
-        findViewById<Button>(R.id.cancelSelectionButton).setOnClickListener {
-            gameSelectionLayout.visibility = android.view.View.GONE
+            val intent = android.content.Intent(this, GameSelectionActivity::class.java)
+            gameSelectionLauncher.launch(intent)
         }
 
         findViewById<Button>(R.id.sendButton).setOnClickListener {
@@ -107,39 +97,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        setupBundledGames()
+
         startOutputPolling()
     }
     
-    private fun showRunningGameUI() {
-        findViewById<LinearLayout>(R.id.gameSelectionLayout).visibility = android.view.View.GONE
-    }
 
-    private fun setupBundledGames() {
-        val container = findViewById<LinearLayout>(R.id.bundledGamesContainer)
-        val games = assets.list("games") ?: emptyArray()
-        games.forEach { assetName ->
-            val btn = Button(this).apply {
-                text = assetName.removeSuffix(".z3").uppercase()
-                setOnClickListener {
-                    launchBundledGame(assetName)
-                }
-            }
-            container.addView(btn)
-        }
-    }
 
-    private fun launchBundledGame(assetName: String) {
-        val file = File(cacheDir, assetName)
-        assets.open("games/$assetName").use { input ->
-            FileOutputStream(file).use { output ->
-                input.copyTo(output)
-            }
-        }
-        GLKGameEngine.startGame(application, file.absolutePath)
-        showRunningGameUI()
-        outputText.append("\nStarting bundled game: $assetName\n")
-    }
+
+
+
 
     private val outputListener = object : TextOutputInterceptor.OutputListener {
         override fun onTextAppended(text: String) {
@@ -167,26 +133,5 @@ class MainActivity : AppCompatActivity() {
         TextOutputInterceptor.removeListener(outputListener)
     }
 
-    private fun copyUriToInternalStorage(uri: Uri): File? {
-        var fileName = "game_file"
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (cursor.moveToFirst()) {
-                fileName = cursor.getString(nameIndex)
-            }
-        }
 
-        val file = File(cacheDir, fileName)
-        return try {
-            contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(file).use { output ->
-                    input.copyTo(output)
-                }
-            }
-            file
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
 }
