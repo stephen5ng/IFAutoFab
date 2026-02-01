@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ifautofab"
-        minSdk = 28
+        minSdk = 29
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -42,7 +42,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.car.app:app:1.4.0")
-    implementation("androidx.car.app:app-projected:1.4.0")
+    // implementation("androidx.car.app:app-projected:1.4.0")
     implementation("androidx.car.app:app-automotive:1.4.0")
     implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.preference:preference-ktx:1.2.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
 }

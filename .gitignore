@@ -1,9 +1,12 @@
 # Build artifacts
 build/
 .gradle/
+.cxx/
+.externalNativeBuild/
 *.apk
 *.aar
 *.so
+build_output.txt
 
 # Local configuration
 local.properties

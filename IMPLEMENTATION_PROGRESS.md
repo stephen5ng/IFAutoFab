@@ -78,49 +78,23 @@ git diff 533e41b HEAD -- app/src/main/java/com/luxlunae/glk/
   - `glk/view/*` (100+ files) ✗
   - `GLKActivity.java` ✗
   - `bebek/*` (30 files) ✗
-- [ ] Finished GLKModel refactoring (WIP - removing AndroidViewModel)
-- [ ] Finished GLKController cleanup (WIP - removing GLKActivity)
-- [ ] Reached compilation ❌ 67 errors remaining
-
-**Compilation Errors** (67 total):
-- PreferencesActivity references (~20 errors)
-- GLKKeyboardMapping references (~15 errors)
-- GLKScreen references (~10 errors)
-- getApplication() calls (~10 errors)
-- R.string/R.layout references (~12 errors)
-
-All errors are from **incomplete refactoring** (removing Fabularium dependencies). Fix approach: targeted sed commands + strategic deletions.
+- [x] Finished GLKModel refactoring
+- [x] Finished GLKController cleanup
+- [x] Reached compilation ✅ Build succeeds
 
 ## TODO: Remaining Work
 
-### Phase 3 (continued): Get GLK Layer Compiling
-1. Remove all `PreferencesActivity` references from GLKModel
-2. Remove all `GLKKeyboardMapping` references
-3. Remove all `GLKScreen` references (replace with Object or stub)
-4. Replace `getApplication()` calls with provided Context
-5. Remove all `R.string` and `R.layout` references
-6. Target: `./gradlew assembleDebug` succeeds, produces native .so files
+### Phase 4: App-Layer Code (NEW PACKAGE: com.ifautofab) 🟡 WIP
+ Create IFAutoFab-specific UI and engine:
+- [x] TextOutputInterceptor.kt - Thread-safe output bridge
+- [x] GLKGameEngine.kt - Interpreter lifecycle manager
+- [x] MainActivity.kt - Phone UI for testing
+- [x] layout/activity_main.xml - Phone layout
+- [x] MyCarAppService/GameSession/GameScreen - Car service scaffold
+- [x] AndroidManifest.xml - Car service entries
+- [ ] Refine GameScreen UI (ListTemplate improvements)
+- [ ] Add Voice Input/Output support (Phase 6?)
 
-**Estimated approach**: 5-10 targeted sed commands + 1-2 method stubs
-
-### Phase 4: App-Layer Code (NEW PACKAGE: com.ifautofab)
-Create IFAutoFab-specific UI and engine:
-
-**New files to create**:
-```
-app/src/main/java/com/ifautofab/
-  ├── TextOutputInterceptor.kt         - Thread-safe output bridge
-  ├── GLKGameEngine.kt                 - Interpreter lifecycle manager
-  ├── MainActivity.kt                  - Phone UI (from IFAuto)
-  ├── MyCarAppService.kt               - Car service entry point
-  ├── GameSession.kt                   - Car service session
-  └── GameScreen.kt                    - Car UI (ListTemplate)
-
-app/src/main/res/
-  ├── layout/activity_main.xml         - Phone layout
-  ├── xml/automotive_app_desc.xml      - Car app descriptor
-  └── values/{strings,colors,themes}.xml
-```
 
 **Architecture**:
 ```
