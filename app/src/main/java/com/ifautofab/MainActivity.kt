@@ -52,11 +52,17 @@ class MainActivity : AppCompatActivity() {
         
         newGameButton.setOnClickListener {
             gameSelectionLayout.visibility = android.view.View.VISIBLE
+            findViewById<Button>(R.id.cancelSelectionButton).visibility = android.view.View.VISIBLE
             newGameButton.visibility = android.view.View.GONE
         }
 
         findViewById<Switch>(R.id.ttsSwitch).setOnCheckedChangeListener { _, isChecked ->
             GLKGameEngine.isTtsEnabled = isChecked
+        }
+        
+        findViewById<Button>(R.id.cancelSelectionButton).setOnClickListener {
+            gameSelectionLayout.visibility = android.view.View.GONE
+            newGameButton.visibility = android.view.View.VISIBLE
         }
 
         findViewById<Button>(R.id.sendButton).setOnClickListener {

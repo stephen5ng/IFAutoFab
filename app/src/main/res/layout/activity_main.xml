@@ -53,21 +53,29 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp" />
 
-    <Switch
-        android:id="@+id/ttsSwitch"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Enable Text-to-Speech"
-        android:checked="true"
-        android:layout_marginBottom="8dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
-    <Button
-        android:id="@+id/newGameButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Back to Game Selection"
-        android:visibility="gone"
-        android:layout_marginTop="8dp" />
+        <Switch
+            android:id="@+id/ttsSwitch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Enable TTS"
+            android:checked="true" />
+
+        <Button
+            android:id="@+id/newGameButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Menu"
+            android:visibility="gone"
+            style="?android:attr/buttonBarButtonStyle" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/gameSelectionLayout"
@@ -75,12 +83,23 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <Button
+            android:id="@+id/cancelSelectionButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="Cancel"
+            android:visibility="gone"
+            style="?android:attr/buttonBarButtonStyle" />
+
+
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Bundled Games"
             android:textStyle="bold"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
