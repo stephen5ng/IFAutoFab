@@ -21,7 +21,8 @@ class VoiceInputScreen(carContext: CarContext) : Screen(carContext), SearchTempl
         return SearchTemplate.Builder(this)
             .setHeaderAction(Action.BACK)
             .setInitialSearchText("")
-            .setSearchHint("Speak or type command...")
+            .setSearchHint("Speak command...")
+            .setShowKeyboardByDefault(false)
             .build()
     }
 }
