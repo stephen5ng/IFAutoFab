@@ -1,12 +1,14 @@
 package com.ifautofab
 
 import android.app.Application
+import android.graphics.Point
 import androidx.preference.PreferenceManager
 import com.luxlunae.glk.GLKConstants
 import com.luxlunae.glk.controller.GLKController
 import com.luxlunae.glk.controller.GLKEvent
 import com.luxlunae.glk.model.GLKModel
 import com.luxlunae.glk.model.stream.window.GLKTextBufferM
+import android.util.Log
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -33,16 +35,40 @@ object GLKGameEngine {
 
         val m = GLKModel(application)
         val sharedPref = PreferenceManager.getDefaultSharedPreferences(application)
+        
+        // Fix for Android 10+ and multi-user Automotive: redirect storage to internal FilesDir
+        val internalAppDir = application.filesDir.absolutePath + "/IFAutoFab/"
+        val dir = File(internalAppDir)
+        if (!dir.exists()) {
+            val created = dir.mkdirs()
+            Log.d("GLK_DEBUG", "Created internalAppDir $internalAppDir: $created")
+        }
+        Log.d("GLK_DEBUG", "internalAppDir = $internalAppDir")
+        sharedPref.edit().putString("", internalAppDir).apply()
+
         val ifid = gameFile.name.hashCode().toString()
         val gameExt = gameFile.extension.lowercase()
+        val format = mapExtensionToFormat(gameExt)
+        Log.d("GLK_DEBUG", "gamePath = $gamePath, ext = $gameExt, format = $format")
         
-        m.initialise(sharedPref, gamePath, gameExt, ifid)
+        // Debug: check if native lib exists
+        val appInfo = application.applicationInfo
+        val terpLibName = "bocfel" // Example
+        val terpLibPath = "${appInfo.nativeLibraryDir}/lib${terpLibName}.so"
+        Log.d("GLK_DEBUG", "Checking native lib at $terpLibPath: ${File(terpLibPath).exists()}")
+
+        m.initialise(sharedPref, gamePath, format, ifid)
+        Log.d("GLK_DEBUG", "model.mTerpID = ${m.mTerpID}")
+        
+        // Fix: initialize screen size to avoid null pointer in getScreenSize()
+        m.setScreenSize(Point(1024, 768))
         
         model = m
         lastTextLength = 0
         
         m.setViewUpdateListener {
             val window = m.mStreamMgr.getFirstTextWindow()
+            
             if (window is GLKTextBufferM) {
                 val buffer = window.getBuffer()
                 if (buffer.length > lastTextLength) {
@@ -58,6 +84,21 @@ object GLKGameEngine {
 
         workerThread = GLKController.create(m)
         workerThread?.start()
+    }
+
+    private fun mapExtensionToFormat(ext: String): String {
+        return when (ext) {
+            "z3", "z4", "z5", "z6", "z8" -> "zcode"
+            "ulx", "gblorb" -> "glulx"
+            "a3c" -> "alan"
+            "t3", "t2" -> "tads3"
+            "gam" -> "tads2"
+            "h30", "hex" -> "hugo"
+            "l9" -> "level9"
+            "mag" -> "magscrolls"
+            "cas" -> "scott"
+            else -> ext
+        }
     }
 
     fun sendInput(input: String) {

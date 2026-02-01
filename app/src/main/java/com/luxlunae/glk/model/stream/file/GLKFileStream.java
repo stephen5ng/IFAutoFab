@@ -82,6 +82,13 @@ public class GLKFileStream extends GLKMemoryStream {
                     return false;
             }
 
+            if (fm == GLKConstants.filemode_Read && !mFref.exists()) {
+                // If checking for optional files (like blorb resources), this failure is expected.
+                // Log as debug instead of error.
+                GLKLogger.debug("GLKFile: file " + mFref.getAbsolutePath() + " does not exist.");
+                return false;
+            }
+
             mFile = new RandomAccessFile(mFref, mode);
             mFileC = mFile.getChannel();
             if (mFileC == null) {
