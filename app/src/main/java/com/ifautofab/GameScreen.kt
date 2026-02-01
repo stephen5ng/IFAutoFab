@@ -9,36 +9,39 @@ import androidx.lifecycle.LifecycleOwner
 class GameScreen(carContext: CarContext) : Screen(carContext) {
 
     private val history = mutableListOf<String>()
+    
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private val outputListener = object : TextOutputInterceptor.OutputListener {
+        override fun onTextAppended(text: String) {
+            handler.post {
+                val paragraphs = text.split("\n\n")
+                synchronized(history) {
+                    paragraphs.forEach { 
+                        if (it.isNotBlank()) history.add(it.trim()) 
+                    }
+                    while (history.size > 50) history.removeAt(0)
+                }
+                invalidate()
+            }
+        }
+
+        override fun onStatusUpdated(status: String) {
+        }
+    }
 
     init {
-        // Observe output from the interceptor
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onResume(owner: LifecycleOwner) {
-                pollOutput()
+            override fun onStart(owner: LifecycleOwner) {
+                TextOutputInterceptor.addListener(outputListener)
+            }
+            override fun onStop(owner: LifecycleOwner) {
+                TextOutputInterceptor.removeListener(outputListener)
             }
         })
     }
-
-    private fun pollOutput() {
-        if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) return
-
-        val newText = TextOutputInterceptor.awaitNewText(100)
-        if (newText != null) {
-            // Split by double newlines to treat as paragraphs
-            val paragraphs = newText.split("\n\n")
-            synchronized(history) {
-                paragraphs.forEach { if (it.isNotBlank()) history.add(it.trim()) }
-                // Keep only last 50 paragraphs
-                while (history.size > 50) history.removeAt(0)
-            }
-            invalidate()
-        }
-        
-        // Continue polling
-        carContext.mainExecutor.execute {
-            pollOutput()
-        }
-    }
+    
+    // Removed pollOutput and related runnable
 
     override fun onGetTemplate(): Template {
         val listBuilder = ItemList.Builder()

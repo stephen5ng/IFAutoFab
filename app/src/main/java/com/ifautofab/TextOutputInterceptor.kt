@@ -7,22 +7,46 @@ import java.util.concurrent.TimeUnit
  * Thread-safe bridge for capturing game output from GLK worker thread.
  */
 object TextOutputInterceptor {
-    private val outputQueue = LinkedBlockingQueue<String>()
-    private val fullOutput = StringBuilder()
+    interface OutputListener {
+        fun onTextAppended(text: String)
+        fun onStatusUpdated(status: String)
+    }
 
+    private val fullOutput = StringBuilder()
     private var statusLine: String = ""
+    private val listeners = java.util.concurrent.CopyOnWriteArrayList<OutputListener>()
+
+    fun addListener(listener: OutputListener) {
+        listeners.add(listener)
+        // Send current state to new listener
+        synchronized(fullOutput) {
+            if (fullOutput.isNotEmpty()) {
+                listener.onTextAppended(fullOutput.toString())
+            }
+        }
+        listener.onStatusUpdated(statusLine)
+    }
+
+    fun removeListener(listener: OutputListener) {
+        listeners.remove(listener)
+    }
 
     fun appendText(text: String) {
         if (text.isEmpty()) return
         synchronized(fullOutput) {
             fullOutput.append(text)
         }
-        outputQueue.offer(text)
+        for (listener in listeners) {
+            listener.onTextAppended(text)
+        }
     }
 
     fun updateStatusLine(text: String) {
         synchronized(this) {
             statusLine = text
+        }
+        for (listener in listeners) {
+            listener.onStatusUpdated(text)
         }
     }
 
@@ -30,13 +54,6 @@ object TextOutputInterceptor {
         synchronized(this) {
             return statusLine
         }
-    }
-
-    /**
-     * Wait for new text to be available. Returns null if timeout reached.
-     */
-    fun awaitNewText(timeoutMs: Long): String? {
-        return outputQueue.poll(timeoutMs, TimeUnit.MILLISECONDS)
     }
     
     fun getFullOutput(): String {
@@ -49,6 +66,8 @@ object TextOutputInterceptor {
         synchronized(fullOutput) {
             fullOutput.setLength(0)
         }
-        outputQueue.clear()
+        // Notify listeners of clear? Or just let them append new text? 
+        // For now, simpler implies just new text.
+        // We could add onClear() if needed.
     }
 }

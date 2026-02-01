@@ -87,21 +87,30 @@ class MainActivity : AppCompatActivity() {
         outputText.append("\nStarting bundled game: $assetName\n")
     }
 
-    private fun startOutputPolling() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            while (true) {
-                val newText = TextOutputInterceptor.awaitNewText(100)
-                if (newText != null) {
-                    withContext(Dispatchers.Main) {
-                        outputText.append(newText)
-                        // Post delay to allow layout update before scrolling
-                        scrollView.post {
-                            scrollView.fullScroll(ScrollView.FOCUS_DOWN)
-                        }
-                    }
+    private val outputListener = object : TextOutputInterceptor.OutputListener {
+        override fun onTextAppended(text: String) {
+            runOnUiThread {
+                outputText.append(text)
+                scrollView.post {
+                    scrollView.fullScroll(ScrollView.FOCUS_DOWN)
                 }
             }
         }
+
+        override fun onStatusUpdated(status: String) {
+            // Optional: update status bar or title if needed
+        }
+    }
+
+    private fun startOutputPolling() {
+        // Clear previous content if any, relying on full history catch-up
+        outputText.text = ""
+        TextOutputInterceptor.addListener(outputListener)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        TextOutputInterceptor.removeListener(outputListener)
     }
 
     private fun copyUriToInternalStorage(uri: Uri): File? {
