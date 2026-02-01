@@ -68,7 +68,7 @@ public class GLKResourceManager {
 
     public boolean getSound(@NonNull String sndId, @NonNull GLKSoundStream s) {
         int[] chunkInfo = new int[2];
-        byte[] data;
+        byte[] data = null;
 
         s.reset();      // ensure the sound stream is in a valid state for setting a data source
         switch (mModel.mTerpID) {
@@ -184,7 +184,7 @@ public class GLKResourceManager {
             }
 
             // Load the image in different ways, depending upon the game format
-            byte[] data;
+            byte[] data = null;
             switch (mModel.mTerpID) {
                 case TADS:
                     // Try to load the picture from a TADS 2 or 3 resource file

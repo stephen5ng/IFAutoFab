@@ -21,6 +21,7 @@
 # Sets the minimum version of CMake required to build your native library.
 # This ensures that a certain set of CMake features is available to your build.
 cmake_minimum_required(VERSION 3.4.1)
+project(IFAutoFab)
 
 function(addprefix var prefix)
    set(listVar "")
@@ -224,7 +225,7 @@ add_library( git
 
 target_compile_options( git
                         PRIVATE
-                        -DUSE_MMAP -DUSE_INLINE
+                        -DUSE_MMAP -DUSE_INLINE -DGARGLK
                         -O3 -Wall )
 
 target_link_libraries( git
@@ -393,6 +394,7 @@ target_include_directories( scott
 # TADS 2 AND 3
 #################################################################
 
+if(FALSE)
 ####### SOURCE FILES COMMON TO TERP AND COMPILER  ###############
 
 addprefix( T2COMMON
@@ -433,9 +435,9 @@ addprefix( TCOMMON
            tads3/derived/vmuni_cs.cpp
            tads3/indlg_tx3.cpp )
 
-add_library( tadsc
-             STATIC
-             ${T2COMMON} ${T3COMMON} ${TCOMMON})
+# add_library( tadsc
+#              STATIC
+#              ${T2COMMON} ${T3COMMON} ${TCOMMON})
 
 target_compile_options( tadsc
                         PRIVATE
@@ -471,9 +473,9 @@ addprefix( TERP
            oemfab.c osglk.c
            tads3/askf_os3.cpp vmglk23.cpp )
 
-add_library( tads
-             SHARED
-             ${T2TERP} ${T3TERP} ${TERP})
+# add_library( tads
+#              SHARED
+#              ${T2TERP} ${T3TERP} ${TERP})
 
 target_compile_options( tads
                         PRIVATE
@@ -488,4 +490,6 @@ target_link_libraries( tads
 target_include_directories( tads
                             PRIVATE
                             glk garglk/terps garglk/tads garglk/tads/tads2 garglk/tads/tads3 garglk/tads/tads3/unix )
+
+endif()
 

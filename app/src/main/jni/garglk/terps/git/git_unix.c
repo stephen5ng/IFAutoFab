@@ -105,6 +105,7 @@ void glk_main ()
     int          file;
     struct stat  info;
     const char * ptr;
+    char errmsg[256];
     
 #ifdef GARGLK
 	if (gStartupError)

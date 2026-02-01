@@ -140,8 +140,8 @@ public final class GLKController {
      *          Returns a Thread object ready for use; simply call run() when you wish to
      *          start it.
      */
-    public static Thread create(@NonNull GLKModel m, @NonNull Object a) {
-        return new Thread(new RunnableTerp(m, a));
+    public static Thread create(@NonNull GLKModel m /*, @NonNull Object a*/) {
+        return new Thread(new RunnableTerp(m));
     }
 
     /**
@@ -2139,6 +2139,12 @@ public final class GLKController {
      */
     @SuppressWarnings("unused")   // this is called by the JNI layer
     public static int glk_fileref_create_by_prompt(@NonNull GLKModel m, int usage, int fmode, int rock) throws InterruptedException {
+        // Fabularium used GLKScreen to prompt. We are headless/automotive.
+        // We cannot prompt the user for a file path in the same way.
+        // Fail for now.
+        GLKLogger.warn("glk_fileref_create_by_prompt: prompting not supported in this environment.");
+        return GLKConstants.NULL;
+        /*
         int fileType = (usage & GLKConstants.fileusage_TypeMask);
         String path;
         try {
@@ -2157,17 +2163,10 @@ public final class GLKController {
             // User has cancelled
             return GLKConstants.NULL;
         }
-
-        // OK, if we get to this point we have a valid file path
-        GLKFileRef f = new GLKFileRef(path, usage, rock);
-        m.mStreamMgr.addStreamToPool(f);
-
-        if (DEBUG_GLK_CALLS) {
-            GLKLogger.debug("glk_fileref_create_by_prompt: " + GLKConstants.fileusageToString(usage) + ", " +
-                    GLKConstants.filemodeToString(fmode) + ", " + rock + " => " + f.getStreamId());
-        }
-        return f.getStreamId();
+        */
     }
+
+
 
     /**
      * Creates a reference to a temporary file.
@@ -4378,12 +4377,12 @@ public final class GLKController {
     private static class RunnableTerp implements Runnable {
         @NonNull
         private final GLKModel mModel;
-        @NonNull
+        // @NonNull
         // private final Object mAct;
 
-        RunnableTerp(@NonNull GLKModel m, @NonNull Object a) {
+        RunnableTerp(@NonNull GLKModel m /*, @NonNull Object a*/) {
             mModel = m;
-            mAct = a;
+            // mAct = a;
         }
 
         private void fatalError(@NonNull String error) {
@@ -4453,7 +4452,7 @@ public final class GLKController {
             GLKLogger.debug("  Plugin: " + terpLibPath);
             GLKLogger.debug("  Command: '".concat(sb.toString()) + "'");
             GLKLogger.debug("======================");
-            int ret;
+            int ret = 1;
             if (mModel.mTerpIsJava) {
                 // run in Java
                 switch (mModel.mTerpLibName) {
@@ -4493,12 +4492,13 @@ public final class GLKController {
                 GLKLogger.shutdown();
                 Process.killProcess(Process.myPid());
             } else {
-                mAct.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mAct.finish();
-                    }
-                });
+                GLKLogger.debug("Terp finished normally.");
+                // mAct.runOnUiThread(new Runnable() {
+                //     @Override
+                //     public void run() {
+                //         mAct.finish();
+                //     }
+                // });
             }
         }
     }

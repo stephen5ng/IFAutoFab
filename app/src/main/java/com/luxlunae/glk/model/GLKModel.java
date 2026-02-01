@@ -20,8 +20,8 @@
 package com.luxlunae.glk.model;
 
 import android.app.Application;
-import android.app.FragmentManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -151,8 +151,6 @@ public class GLKModel {
     @Nullable
     public GLKCharsetManager mCharsetMgr;
     @Nullable
-    public GLKKeyboardMapping[] mKeyboardMappings = null;
-    @Nullable
     public String mKeyboardName = null;
     public String mTerpName;
     public String mTerpLibName;
@@ -184,11 +182,13 @@ public class GLKModel {
     public int mWinFocusID = GLKConstants.NULL;
     private Point mScreenSize;
 
-    private WeakReference<GLKScreen> mScreen;
-    private WeakReference<FragmentManager> mFragMgr;
+    // private WeakReference<GLKScreen> mScreen;
+    // private WeakReference<FragmentManager> mFragMgr;
+
+    private Application mApplication;
 
     public GLKModel(@NonNull Application application) {
-        super(application);
+        mApplication = application;
         mResourceMgr = new GLKResourceManager(this);
         mStreamMgr = new GLKStreamManager();
     }
@@ -510,7 +510,7 @@ public class GLKModel {
         return ret;
     }
 
-    public void initialise(@NonNull ParcelableSharedPrefs sharedPref,
+    public void initialise(@NonNull SharedPreferences sharedPref,
                            @NonNull String gamePath, @NonNull String gameFormat, @NonNull String ifid) {
         GLKLogger.debug("Setting up Model...");
 
@@ -553,11 +553,11 @@ public class GLKModel {
             mTerpArgs = null;
         }
 
-        mUseBuiltinKeyboard = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_BUILTIN_KEYBOARD, true);
+        mUseBuiltinKeyboard = sharedPref.getBoolean("builtin_keyboard", true);
         mUsingHardwareKeyboard = res.getConfiguration().keyboard != Configuration.KEYBOARD_NOKEYS;
 
         // Get the locale
-        String l = sharedPref.getString(PreferencesActivity.KEY_PREF_LOCALE, null);
+        String l = sharedPref.getString("locale", null);
         if (l == null || l.equals("")) {
             mLocale = Locale.getDefault();
         } else {
@@ -578,8 +578,8 @@ public class GLKModel {
         }
 
         // Initialise the charset manager
-        String charsetName = sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_CHARSET, "UTF-8");
-        String bo = sharedPref.getString(PreferencesActivity.KEY_PREF_BYTE_ORDER, "0");
+        String charsetName = sharedPref.getString("default_charset", "UTF-8");
+        String bo = sharedPref.getString("byte_order", "0");
         switch (bo) {
             case "1":
                 mCharsetMgr = new GLKCharsetManager(GLKCharsetManager.ENDIAN.BIG_FIXED, charsetName);
@@ -622,13 +622,13 @@ public class GLKModel {
         // Android won't change it!
 
         // Vertical scrollbars (no-one should need a scrollbar wider than 20 dp right!?)
-        int sizeDp = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_VSCROLLBAR_WIDTH, "3"),
+        int sizeDp = verifyInt(sharedPref.getString("vscrollbar_width", "3"),
                 3, "vertical scrollbar width", 0, 20);
         mVScrollbarWidthPx = sizeDp > 0 ? GLKUtils.dpToPx(sizeDp, dm) : 0;
-        String o = sharedPref.getString(PreferencesActivity.KEY_PREF_VSCROLLBAR_GRAD_ORIENT, "6");
-        HVScrollView.setScrollbarGradientOrientation(res, true, o);
-        String startCol = sharedPref.getString(PreferencesActivity.KEY_PREF_VSCROLLBAR_START_COLOR, "");
-        String endCol = sharedPref.getString(PreferencesActivity.KEY_PREF_VSCROLLBAR_END_COLOR, "");
+        String o = sharedPref.getString("vscrollbar_grad_orient", "6");
+        // HVScrollView.setScrollbarGradientOrientation(res, true, o);
+        String startCol = sharedPref.getString("vscrollbar_start_color", "");
+        String endCol = sharedPref.getString("vscrollbar_end_color", "");
         if (!startCol.equals("") && !endCol.equals("")) {
             try {
                 mVScrollbarColors[0] = Color.parseColor(startCol);
@@ -641,13 +641,13 @@ public class GLKModel {
         }
 
         // Horizontal scrollbars (no-one should need a scrollbar higher than 20 dp right!?)
-        sizeDp = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_HSCROLLBAR_HEIGHT, "3"),
+        sizeDp = verifyInt(sharedPref.getString("hscrollbar_height", "3"),
                 3, "horizontal scrollbar height", 0, 20);
         mHScrollbarHeightPx = sizeDp > 0 ? GLKUtils.dpToPx(sizeDp, dm) : 0;
-        o = sharedPref.getString(PreferencesActivity.KEY_PREF_HSCROLLBAR_GRAD_ORIENT, "3");
-        HVScrollView.setScrollbarGradientOrientation(res, false, o);
-        startCol = sharedPref.getString(PreferencesActivity.KEY_PREF_HSCROLLBAR_START_COLOR, "");
-        endCol = sharedPref.getString(PreferencesActivity.KEY_PREF_HSCROLLBAR_END_COLOR, "");
+        o = sharedPref.getString("hscrollbar_grad_orient", "3");
+        // HVScrollView.setScrollbarGradientOrientation(res, false, o);
+        startCol = sharedPref.getString("hscrollbar_start_color", "");
+        endCol = sharedPref.getString("hscrollbar_end_color", "");
         if (!startCol.equals("") && !endCol.equals("")) {
             try {
                 mHScrollbarColors[0] = Color.parseColor(startCol);
@@ -662,14 +662,14 @@ public class GLKModel {
         // Set the border style - by default never show borders
         // Currently valid border style values range from 0-2 (see arrays.xml)
         // And presumably no-one should need borders wider or higher than 20 dp
-        mBorderStyle = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_BORDER_STYLE, "1"),
+        mBorderStyle = verifyInt(sharedPref.getString("border_style", "1"),
                 1, "border style", 0, 2);
-        mBorderWidthPX = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_BORDER_WIDTH, "1"),
+        mBorderWidthPX = verifyInt(sharedPref.getString("border_width", "1"),
                 1, "border width", 0, 20);
-        mBorderHeightPX = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_BORDER_HEIGHT, "1"),
+        mBorderHeightPX = verifyInt(sharedPref.getString("border_height", "1"),
                 1, "border height", 0, 20);
         try {
-            mBorderColor = Color.parseColor(sharedPref.getString(PreferencesActivity.KEY_PREF_BORDER_COLOR, "darkgrey"));
+            mBorderColor = Color.parseColor(sharedPref.getString("border_color", "darkgrey"));
         } catch (IllegalArgumentException e) {
             mBorderColor = Color.DKGRAY;
         }
@@ -677,86 +677,86 @@ public class GLKModel {
         mBorderHeightPX = GLKUtils.dpToPx(mBorderHeightPX, dm);
 
         // Set the default font size (in scale-independent pixels, SP)
-        mDefaultFontSizeTextBuf = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_FONT_SIZE_TEXT_BUF, "15"),
+        mDefaultFontSizeTextBuf = verifyInt(sharedPref.getString("default_font_size_text_buf", "15"),
                 15, "default text buffer font size", 1, 80);
-        mDefaultFontSizeTextGrid = verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_FONT_SIZE_TEXT_GRID, "12"),
+        mDefaultFontSizeTextGrid = verifyInt(sharedPref.getString("default_font_size_text_grid", "12"),
                 12, "default text grid font size", 1, 80);
-        mAutoResizeLargeImages = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_DEFAULT_AUTO_RESIZE_LARGE_IMAGES, true);
+        mAutoResizeLargeImages = sharedPref.getBoolean("auto_resize_large_images", true);
 
-        mEnableGraphics = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_ENABLE_GRAPHICS, true);
-        mEnableSounds = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_ENABLE_SOUNDS, true);
-        mEnableHyperlinks = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_ENABLE_HYPERLINKS, true);
-        mEnableDateTime = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_ENABLE_DATETIME, true);
-        mEnableTimer = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_ENABLE_TIMER, true);
+        mEnableGraphics = sharedPref.getBoolean("enable_graphics", true);
+        mEnableSounds = sharedPref.getBoolean("enable_sounds", true);
+        mEnableHyperlinks = sharedPref.getBoolean("enable_hyperlinks", true);
+        mEnableDateTime = sharedPref.getBoolean("enable_datetime", true);
+        mEnableTimer = sharedPref.getBoolean("enable_timer", true);
 
-        mShowRawHTML = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_SHOW_RAW_HTML, false);
+        mShowRawHTML = sharedPref.getBoolean("show_raw_html", false);
 
-        mDefaultLeadingTextBuf = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_LEADING_TEXT_BUF, "1.2"),
+        mDefaultLeadingTextBuf = verifyFloat(sharedPref.getString("default_leading_text_buf", "1.2"),
                 1.2f, "default leading for text buffers", 0.1f, 10f);
-        mDefaultLeadingTextGrid = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_LEADING_TEXT_GRID, "1.2"),
+        mDefaultLeadingTextGrid = verifyFloat(sharedPref.getString("default_leading_text_grid", "1.2"),
                 1.2f, "default leading for text grids", 0.1f, 10f);
 
         // Allow margins to vary between 0 - 100000 dp. That should be enough for anyone, on any device.
         mDefaultMarginsTextBufPX = new Rect();
-        mDefaultMarginsTextBufPX.left = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_LMARGIN_BUF, "5"),
+        mDefaultMarginsTextBufPX.left = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_lmargin_buf", "5"),
                 5, "text buffer left margin", 0, 100000), dm);
-        mDefaultMarginsTextBufPX.right = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_RMARGIN_BUF, "5"),
+        mDefaultMarginsTextBufPX.right = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_rmargin_buf", "5"),
                 5, "text buffer right margin", 0, 100000), dm);
-        mDefaultMarginsTextBufPX.top = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_TMARGIN_BUF, "5"),
+        mDefaultMarginsTextBufPX.top = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_tmargin_buf", "5"),
                 5, "text buffer top margin", 0, 100000), dm);
-        mDefaultMarginsTextBufPX.bottom = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_BMARGIN_BUF, "5"),
+        mDefaultMarginsTextBufPX.bottom = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_bmargin_buf", "5"),
                 5, "text buffer bottom margin", 0, 100000), dm);
 
         mDefaultMarginsTextGridPX = new Rect();
-        mDefaultMarginsTextGridPX.left = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_LMARGIN_GRID, "0"),
+        mDefaultMarginsTextGridPX.left = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_lmargin_grid", "0"),
                 0, "text grid left margin", 0, 100000), dm);
-        mDefaultMarginsTextGridPX.right = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_RMARGIN_GRID, "0"),
+        mDefaultMarginsTextGridPX.right = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_rmargin_grid", "0"),
                 0, "text grid right margin", 0, 100000), dm);
-        mDefaultMarginsTextGridPX.top = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_TMARGIN_GRID, "0"),
+        mDefaultMarginsTextGridPX.top = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_tmargin_grid", "0"),
                 0, "text grid top margin", 0, 100000), dm);
-        mDefaultMarginsTextGridPX.bottom = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_BMARGIN_GRID, "0"),
+        mDefaultMarginsTextGridPX.bottom = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_bmargin_grid", "0"),
                 0, "text grid bottom margin", 0, 100000), dm);
 
         mDefaultWindowMarginsPX = new Rect();
-        mDefaultWindowMarginsPX.left = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_LMARGIN_WIN, "10"),
+        mDefaultWindowMarginsPX.left = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_lmargin_win", "10"),
                 10, "window left margin", 0, 100000), dm);
-        mDefaultWindowMarginsPX.right = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_RMARGIN_WIN, "10"),
+        mDefaultWindowMarginsPX.right = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_rmargin_win", "10"),
                 10, "window right margin", 0, 100000), dm);
-        mDefaultWindowMarginsPX.top = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_TMARGIN_WIN, "10"),
+        mDefaultWindowMarginsPX.top = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_tmargin_win", "10"),
                 10, "window top margin", 0, 100000), dm);
-        mDefaultWindowMarginsPX.bottom = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_DEFAULT_BMARGIN_WIN, "10"),
+        mDefaultWindowMarginsPX.bottom = GLKUtils.dpToPx(verifyInt(sharedPref.getString("default_bmargin_win", "10"),
                 10, "window bottom margin", 0, 100000), dm);
         try {
-            mBackgroundColor = Color.parseColor(sharedPref.getString(PreferencesActivity.KEY_PREF_WIN_BGCOLOR, "white"));
+            mBackgroundColor = Color.parseColor(sharedPref.getString("win_bgcolor", "white"));
         } catch (IllegalArgumentException e) {
             mBackgroundColor = Color.WHITE;
         }
         mHyperlinkColor = Color.RED;
 
-        mSyncScreenBG = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_SYNC_SCREEN_BACKGROUND, true);
+        mSyncScreenBG = sharedPref.getBoolean("sync_screen_background", true);
 
         // Users can make windows 1/10,000 of the normal size, up to 10,000 times the normal size
-        mTextBufWidthMultiplier = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_TEXTBUF_WIDTH_MULTIPLIER, "1.0"),
+        mTextBufWidthMultiplier = verifyFloat(sharedPref.getString("textbuf_width_multiplier", "1.0"),
                 1.0f, "text buffer width multipler", 0.0001f, 10000f);
-        mTextBufHeightMultiplier = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_TEXTBUF_HEIGHT_MULTIPLIER, "1.0"),
+        mTextBufHeightMultiplier = verifyFloat(sharedPref.getString("textbuf_height_multiplier", "1.0"),
                 1.0f, "text buffer height multiplier", 0.0001f, 10000f);
-        mTextGridWidthMultiplier = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_TEXTGRID_WIDTH_MULTIPLIER, "1.0"),
+        mTextGridWidthMultiplier = verifyFloat(sharedPref.getString("textgrid_width_multiplier", "1.0"),
                 1.0f, "text grid width multiplier", 0.0001f, 10000f);
-        mTextGridHeightMultiplier = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_TEXTGRID_HEIGHT_MULTIPLIER, "1.0"),
+        mTextGridHeightMultiplier = verifyFloat(sharedPref.getString("textgrid_height_multiplier", "1.0"),
                 1.0f, "text grid height multiplier", 0.0001f, 10000f);
-        mGraphicsWidthMultiplier = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_GRAPHICS_WIDTH_MULTIPLIER, "1.0"),
+        mGraphicsWidthMultiplier = verifyFloat(sharedPref.getString("graphics_width_multiplier", "1.0"),
                 1.0f, "graphics window width multiplier", 0.0001f, 10000f);
-        mGraphicsHeightMultiplier = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_GRAPHICS_HEIGHT_MULTIPLIER, "1.0"),
+        mGraphicsHeightMultiplier = verifyFloat(sharedPref.getString("graphics_height_multiplier", "1.0"),
                 1.0f, "graphics window height multiplier", 0.0001f, 10000f);
 
-        mEnableTextToSpeech = sharedPref.getBoolean(PreferencesActivity.KEY_PREF_ENABLE_TTS, false);
-        mTtsPitch = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_TTS_PITCH, "1.0"),
+        mEnableTextToSpeech = sharedPref.getBoolean("enable_tts", false);
+        mTtsPitch = verifyFloat(sharedPref.getString("tts_pitch", "1.0"),
                 1.0f, "TTS pitch", 0.1f, 10f);
-        mTtsRate = verifyFloat(sharedPref.getString(PreferencesActivity.KEY_PREF_TTS_RATE, "1.0"),
+        mTtsRate = verifyFloat(sharedPref.getString("tts_rate", "1.0"),
                 1.0f, "TTS rate", 0.1f, 10f);
 
         // cursor (between 1 - 500 dp)
-        mCursorWidthPX = GLKUtils.dpToPx(verifyInt(sharedPref.getString(PreferencesActivity.KEY_PREF_CURSOR_WIDTH, "1"),
+        mCursorWidthPX = GLKUtils.dpToPx(verifyInt(sharedPref.getString("cursor_width", "1"),
                 1, "cursor width", 1, 500), dm);
 
         // Load the default fonts
@@ -816,6 +816,7 @@ public class GLKModel {
             }
         }
 
+        /*
         if (mKeyboardName != null) {
             if (mKeyboardName.equals("off")) {
                 mKeyboardOff = true;
@@ -834,10 +835,12 @@ public class GLKModel {
                 }
             }
         }
+        */
 
         GLKLogger.flush();
     }
 
+    /*
     @Nullable
     public FragmentManager getFragmentManager() {
         if (mFragMgr != null) {
@@ -845,8 +848,9 @@ public class GLKModel {
         }
         return null;
     }
+    */
 
-    private void setTerpDetails(@NonNull GLKController.TerpType terpID) {
+    public void setTerpDetails(@NonNull GLKController.TerpType terpID) {
         mTerpIsJava = false;
 
         switch (terpID) {
@@ -933,7 +937,11 @@ public class GLKModel {
     }
 
     public Context getApplicationContext() {
-        return getApplication().getApplicationContext();
+        return mApplication.getApplicationContext();
+    }
+
+    public Application getApplication() {
+        return mApplication;
     }
 
     public void setWindowFocus(int winID) {
@@ -1465,24 +1473,33 @@ public class GLKModel {
         }
     }
 
-    public void updateView() throws InterruptedException {
-        if (mScreen != null) {
-            GLKScreen scr = mScreen.get();
-            if (scr != null) {
-                scr.postUpdate(this);
-                return;
-            }
+    // Generic view update hook (replaced GLKScreen)
+    public interface ViewUpdateListener {
+        void onUpdate();
+    }
+    private ViewUpdateListener mViewUpdateListener;
+
+    public void updateView() {
+        if (mViewUpdateListener != null) {
+            mViewUpdateListener.onUpdate();
         }
-        GLKLogger.warn("GLKModel: Couldn't update View as have lost reference to screen!");
     }
 
+    public void setViewUpdateListener(ViewUpdateListener listener) {
+        mViewUpdateListener = listener;
+    }
+
+    /*
     public void attachToScreen(GLKScreen scr) {
         mScreen = new WeakReference<>(scr);
     }
+    */
 
+    /*
     public void attachToFragmentManager(FragmentManager fm) {
         mFragMgr = new WeakReference<>(fm);
     }
+    */
 
     public void shutdown() {
         // Now shut down the Model

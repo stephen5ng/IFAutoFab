@@ -50,6 +50,7 @@
 #include <android/log.h>
 
 #include "glk.h"
+#include "gi_dispa.h"
 
 /* Below global variables are all set dynamically when
  * the startup code is called in glkstart.c */
@@ -2395,4 +2396,34 @@ void tadsban_goto(void *banner_handle, int row, int col) {
   (*env)->CallStaticVoidMethod(env, GLKController_class, m_tadsban_goto, GLKModel_obj,
                                  (jint) banner_handle);
 }
+
+
+/* Stubs for dispatch layer */
+void gidispatch_set_object_registry(
+    gidispatch_rock_t (*regi)(void *obj, glui32 objclass), 
+    void (*unregi)(void *obj, glui32 objclass, gidispatch_rock_t objrock)) {
+    // Stub
+}
+
+gidispatch_rock_t gidispatch_get_objrock(void *obj, glui32 objclass) {
+    gidispatch_rock_t rock;
+    rock.num = 0;
+    return rock;
+}
+
+void gidispatch_set_retained_registry(
+    gidispatch_rock_t (*regi)(void *array, glui32 len, char *typecode), 
+    void (*unregi)(void *array, glui32 len, char *typecode, 
+        gidispatch_rock_t objrock)) {
+    // Stub
+}
+
+void gidispatch_set_autorestore_registry(
+    long (*locatearr)(void *array, glui32 len, char *typecode,
+        gidispatch_rock_t objrock, int *elemsizeref),
+    gidispatch_rock_t (*restorearr)(long bufkey, glui32 len,
+        char *typecode, void **arrayref)) {
+    // Stub
+}
+
 

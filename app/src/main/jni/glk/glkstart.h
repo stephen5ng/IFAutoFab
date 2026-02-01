@@ -75,6 +75,7 @@ extern strid_t glkunix_stream_open_pathname(char *pathname, glui32 textmode,
     glui32 rock);
 
 /* Send all exit calls to our custom exit handler */
+extern void ___wrap_exit(int status);
 #define exit(x) ___wrap_exit(x)
 
 #endif /* GT_START_H */
