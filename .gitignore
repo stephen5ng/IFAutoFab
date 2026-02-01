@@ -1,0 +1,22 @@
+# Build artifacts
+build/
+.gradle/
+*.apk
+*.aar
+*.so
+
+# Local configuration
+local.properties
+
+# IDE
+.idea/
+.codeglance/
+*.iml
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+*.log
