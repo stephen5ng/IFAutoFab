@@ -36,6 +36,12 @@ android {
             path = file("src/main/jni/CMakeLists.txt")
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
