@@ -23,10 +23,8 @@ object GLKGameEngine {
     var isTtsEnabled: Boolean = true
 
     fun startGame(application: Application, gamePath: String) {
-        if (workerThread != null && workerThread!!.isAlive) {
-            return // Already running
-        }
-
+        stopGame()
+        
         ttsManager = TTSManager(application)
         val gameFile = File(gamePath)
         if (!gameFile.exists()) {
@@ -124,6 +122,31 @@ object GLKGameEngine {
         }
     }
     
+    fun stopGame() {
+        if (workerThread != null && workerThread!!.isAlive) {
+            // Attempt to quit gracefully first
+            sendInput("quit")
+            sendInput("y")
+            sendInput("yes")
+            
+            try {
+                workerThread?.join(500)
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+            }
+            
+            if (workerThread != null && workerThread!!.isAlive) {
+                Log.w("GLKGameEngine", "Worker thread did not stop gracefully. Interrupting.")
+                workerThread?.interrupt()
+            }
+        }
+        workerThread = null
+        TextOutputInterceptor.clear()
+        
+        // Ensure model is reset or recreated for next run (handled in startGame)
+        model = null 
+    }
+
     fun isRunning(): Boolean {
         return workerThread?.isAlive ?: false
     }
