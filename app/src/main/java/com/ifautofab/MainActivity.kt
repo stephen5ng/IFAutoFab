@@ -47,22 +47,33 @@ class MainActivity : AppCompatActivity() {
             pickFileLauncher.launch("*/*")
         }
         
+        val textInputContainer = findViewById<LinearLayout>(R.id.textInputContainer)
+        val keyboardToggle = findViewById<Button>(R.id.keyboardToggle)
+        
+        keyboardToggle.setOnClickListener {
+            if (textInputContainer.visibility == android.view.View.VISIBLE) {
+                textInputContainer.visibility = android.view.View.GONE
+            } else {
+                textInputContainer.visibility = android.view.View.VISIBLE
+            }
+        }
+
+        findViewById<android.widget.ToggleButton>(R.id.ttsQuickToggle).setOnCheckedChangeListener { _, isChecked ->
+            GLKGameEngine.isTtsEnabled = isChecked
+        }
+        
         val gameSelectionLayout = findViewById<LinearLayout>(R.id.gameSelectionLayout)
         val newGameButton = findViewById<Button>(R.id.newGameButton)
         
         newGameButton.setOnClickListener {
             gameSelectionLayout.visibility = android.view.View.VISIBLE
             findViewById<Button>(R.id.cancelSelectionButton).visibility = android.view.View.VISIBLE
-            newGameButton.visibility = android.view.View.GONE
-        }
-
-        findViewById<Switch>(R.id.ttsSwitch).setOnCheckedChangeListener { _, isChecked ->
-            GLKGameEngine.isTtsEnabled = isChecked
+            // Don't hide the menu button in new layout, or if we do, we need to bring it back
+            // In the consolidated bar, we probably want to keep it visible or maybe disable it
         }
         
         findViewById<Button>(R.id.cancelSelectionButton).setOnClickListener {
             gameSelectionLayout.visibility = android.view.View.GONE
-            newGameButton.visibility = android.view.View.VISIBLE
         }
 
         findViewById<Button>(R.id.sendButton).setOnClickListener {
@@ -102,7 +113,6 @@ class MainActivity : AppCompatActivity() {
     
     private fun showRunningGameUI() {
         findViewById<LinearLayout>(R.id.gameSelectionLayout).visibility = android.view.View.GONE
-        findViewById<Button>(R.id.newGameButton).visibility = android.view.View.VISIBLE
     }
 
     private fun setupBundledGames() {
