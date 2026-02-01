@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
             val file = copyUriToInternalStorage(it)
             if (file != null) {
                 GLKGameEngine.startGame(application, file.absolutePath)
+                showRunningGameUI()
                 outputText.append("\nStarting game: ${file.name}\n")
             }
         }
@@ -45,6 +46,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.pickFileButton).setOnClickListener {
             pickFileLauncher.launch("*/*")
         }
+        
+        val gameSelectionLayout = findViewById<LinearLayout>(R.id.gameSelectionLayout)
+        val newGameButton = findViewById<Button>(R.id.newGameButton)
+        
+        newGameButton.setOnClickListener {
+            gameSelectionLayout.visibility = android.view.View.VISIBLE
+            newGameButton.visibility = android.view.View.GONE
+        }
 
         findViewById<Switch>(R.id.ttsSwitch).setOnCheckedChangeListener { _, isChecked ->
             GLKGameEngine.isTtsEnabled = isChecked
@@ -60,6 +69,11 @@ class MainActivity : AppCompatActivity() {
 
         setupBundledGames()
         startOutputPolling()
+    }
+    
+    private fun showRunningGameUI() {
+        findViewById<LinearLayout>(R.id.gameSelectionLayout).visibility = android.view.View.GONE
+        findViewById<Button>(R.id.newGameButton).visibility = android.view.View.VISIBLE
     }
 
     private fun setupBundledGames() {
@@ -84,6 +98,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         GLKGameEngine.startGame(application, file.absolutePath)
+        showRunningGameUI()
         outputText.append("\nStarting bundled game: $assetName\n")
     }
 

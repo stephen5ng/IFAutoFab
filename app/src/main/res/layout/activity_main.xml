@@ -50,24 +50,39 @@
         android:checked="true"
         android:layout_marginBottom="8dp" />
 
-    <TextView
+    <Button
+        android:id="@+id/newGameButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Bundled Games"
-        android:textStyle="bold"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp" />
+        android:text="Back to Game Selection"
+        android:visibility="gone"
+        android:layout_marginTop="8dp" />
 
     <LinearLayout
-        android:id="@+id/bundledGamesContainer"
+        android:id="@+id/gameSelectionLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" />
+        android:orientation="vertical">
 
-    <Button
-        android:id="@+id/pickFileButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Pick External Game File" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Bundled Games"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/bundledGamesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/pickFileButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Pick External Game File" />
+    </LinearLayout>
 
 </LinearLayout>
