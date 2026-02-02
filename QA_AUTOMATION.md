@@ -229,6 +229,47 @@ Example found in `GLKGameEngine`:
 
 ---
 
+## Race Conditions in Game Transitions (2026-02-02)
+
+**Pitfall:** Background worker threads for old game sessions may finish and trigger UI listeners *after* a new game has already started.
+**Symptoms:** The "Game Ended" screen appears immediately or shortly after a game restart/resurrection, blocking the active game.
+
+**Solution:** Implement a model-identity check in the `onGameFinished` listener.
+```kotlin
+m.setGameStatusListener {
+    mainHandler.post { 
+        // ONLY trigger UI change if the finishing model matches the active one
+        if (model == m) {
+            onGameFinishedListener?.invoke()
+            stopGame(false)
+        }
+    }
+}
+```
+This ensures that late notifications from defunct threads are safely ignored.
+
+---
+
+## Verified Test Scenarios
+
+### 1. Zork Suicide/Death Loop
+Verifies that the "Game Ended" UI appears correctly after a natural gameplay death (not just a manual `quit`).
+
+**Steps:**
+1. Start/Restart Zork 1.
+2. Navigate to the Cellar (move rug, open trapdoor, down).
+3. Move randomly in the dark until eaten by a grue.
+4. **Note:** Zork resurrection drops you in the Forest. To test the final exit, you must die again or manually `quit`.
+5. Confirm exit with `y`.
+6. Verify visibility of `returnToMenuButton` via UI dump.
+
+**Verification Command:**
+```bash
+adb shell uiautomator dump /sdcard/view_dump.xml
+adb pull /sdcard/view_dump.xml
+grep "GAME ENDED" view_dump.xml
+```
+
 ## Bugs Found (Zork 1 session, 2026-02-01)
 
 ### 1. Autosave restore prints "restore" twice — FIXED
