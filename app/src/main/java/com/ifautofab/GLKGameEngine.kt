@@ -88,10 +88,16 @@ object GLKGameEngine {
             
             // Set up exit listener
             m.setGameStatusListener {
-                Log.d("GLKGameEngine", "Game finished notification received.")
                 mainHandler.post { 
-                    onGameFinishedListener?.invoke()
-                    stopGame(false) // Preserve output for reading
+                    // Verify this notification is for the currently active game to avoid race conditions
+                    // where an old thread finishes after a restart and triggers the UI.
+                    if (model == m) {
+                        Log.d("GLKGameEngine", "Game finished notification received.")
+                        onGameFinishedListener?.invoke()
+                        stopGame(false) // Preserve output for reading
+                    } else {
+                        Log.d("GLKGameEngine", "Ignoring finish notification for old game instance.")
+                    }
                 }
             }
             
