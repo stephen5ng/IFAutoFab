@@ -43,7 +43,7 @@ class GameSelectionActivity : AppCompatActivity() {
         val games = assets.list("games") ?: emptyArray()
         games.forEach { assetName ->
             val btn = Button(this).apply {
-                text = assetName.removeSuffix(".z3").uppercase()
+                text = assetName.replace(Regex("\\.(z3|z5|z8|ulx)$", RegexOption.IGNORE_CASE), "").uppercase()
                 setOnClickListener {
                     launchBundledGame(assetName)
                 }
