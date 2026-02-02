@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity() {
                 GLKGameEngine.sendInput(command)
             }
         }
-        registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"))
+        registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"), Context.RECEIVER_EXPORTED)
     }
     
 

@@ -118,10 +118,7 @@ object GLKGameEngine {
             if (inputBB != null) {
                 val unicode = window.mIs32Bit
                 val len = m.mCharsetMgr?.putGLKString(input, inputBB, unicode, false) ?: 0
-                
-                // Echo the input to the output buffer as if the user typed it
-                window.putString(input + "\n")
-                
+
                 val ev = GLKEvent()
                 ev.lineEvent(window.getStreamId(), len, 0)
                 
