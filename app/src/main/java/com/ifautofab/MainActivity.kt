@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
                 if (name != null) {
                     getSharedPreferences("IFAutoFab", MODE_PRIVATE)
                         .edit().putString("last_game", name).apply()
+                    updateTitle(name)
                 }
                 GLKGameEngine.startGame(application, path)
             }
@@ -167,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         // If already cached, start directly
         val cached = File(cacheDir, gameName)
         if (cached.exists()) {
+            updateTitle(gameName)
             GLKGameEngine.startGame(application, cached.absolutePath)
             return
         }
@@ -193,10 +195,20 @@ class MainActivity : AppCompatActivity() {
             }
             getSharedPreferences("IFAutoFab", MODE_PRIVATE)
                 .edit().putString("last_game", assetName).apply()
+            updateTitle(assetName)
             GLKGameEngine.startGame(application, file.absolutePath)
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun updateTitle(gameName: String) {
+        // Strip extension and format for display
+        val displayName = gameName.replace(Regex("\\.(z3|z5|z8|ulx|gblorb)$", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("[._-]"), " ")
+            .split(" ")
+            .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+        supportActionBar?.title = displayName
     }
 
     override fun onDestroy() {
