@@ -1,5 +1,9 @@
 package com.ifautofab
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -23,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var outputText: TextView
     private lateinit var inputText: EditText
     private lateinit var scrollView: ScrollView
+    private lateinit var debugReceiver: BroadcastReceiver
 
     private val gameSelectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -98,6 +103,14 @@ class MainActivity : AppCompatActivity() {
 
 
         startOutputPolling()
+
+        debugReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val command = intent.getStringExtra("command") ?: return
+                GLKGameEngine.sendInput(command)
+            }
+        }
+        registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"))
     }
     
 
@@ -135,6 +148,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(debugReceiver)
         GLKGameEngine.stopGame()
         TextOutputInterceptor.removeListener(outputListener)
     }

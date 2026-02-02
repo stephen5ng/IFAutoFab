@@ -1,5 +1,6 @@
 package com.ifautofab
 
+import android.util.Log
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -34,6 +35,7 @@ object TextOutputInterceptor {
 
     fun appendText(text: String) {
         if (text.isEmpty()) return
+        Log.d("GameOutput", text)
         synchronized(fullOutput) {
             fullOutput.append(text)
         }
