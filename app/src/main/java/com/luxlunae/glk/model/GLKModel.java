@@ -187,11 +187,27 @@ public class GLKModel {
     // private WeakReference<FragmentManager> mFragMgr;
 
     private Application mApplication;
+    
+    public interface GameStatusListener {
+        void onGameFinished();
+    }
+    
+    private GameStatusListener mGameStatusListener;
 
     public GLKModel(@NonNull Application application) {
         mApplication = application;
         mResourceMgr = new GLKResourceManager(this);
         mStreamMgr = new GLKStreamManager();
+    }
+    
+    public void setGameStatusListener(GameStatusListener listener) {
+        mGameStatusListener = listener;
+    }
+    
+    public void notifyGameFinished() {
+        if (mGameStatusListener != null) {
+            mGameStatusListener.onGameFinished();
+        }
     }
 
     private static GLKController.TerpType getTerpFromName(@NonNull String terpName) {
