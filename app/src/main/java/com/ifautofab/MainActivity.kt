@@ -130,6 +130,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        GLKGameEngine.stopGame()
         TextOutputInterceptor.removeListener(outputListener)
     }
 

@@ -9,6 +9,8 @@ import com.luxlunae.glk.controller.GLKEvent
 import com.luxlunae.glk.model.GLKModel
 import com.luxlunae.glk.model.stream.window.GLKTextBufferM
 import android.util.Log
+import android.os.Handler
+import android.os.Looper
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -49,14 +51,7 @@ object GLKGameEngine {
         val format = mapExtensionToFormat(gameExt)
         Log.d("GLK_DEBUG", "gamePath = $gamePath, ext = $gameExt, format = $format")
         
-        // Debug: check if native lib exists
-        val appInfo = application.applicationInfo
-        val terpLibName = "bocfel" // Example
-        val terpLibPath = "${appInfo.nativeLibraryDir}/lib${terpLibName}.so"
-        Log.d("GLK_DEBUG", "Checking native lib at $terpLibPath: ${File(terpLibPath).exists()}")
-
         m.initialise(sharedPref, gamePath, format, ifid)
-        Log.d("GLK_DEBUG", "model.mTerpID = ${m.mTerpID}")
         
         // Fix: initialize screen size to avoid null pointer in getScreenSize()
         m.setScreenSize(Point(1024, 768))
@@ -82,6 +77,22 @@ object GLKGameEngine {
 
         workerThread = GLKController.create(m)
         workerThread?.start()
+
+        // Auto-restore if autosave exists
+        val autosavePath = m.mGameDataPath + "autosave" + GLKConstants.GLK_SAVE_EXT
+        if (File(autosavePath).exists()) {
+            Log.d("GLKGameEngine", "Autosave found at $autosavePath, attempting to restore...")
+            // We need to wait a bit for the terp to be ready for input
+            // In a better implementation, we'd wait for a line input request event
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                m.isAutosaving = true // reuse flag to bypass prompt in restore too
+                sendInput("restore")
+                // Wait another short bit for the restore to complete
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    m.isAutosaving = false
+                }, 500)
+            }, 1000)
+        }
     }
 
     private fun mapExtensionToFormat(ext: String): String {
@@ -123,7 +134,20 @@ object GLKGameEngine {
     }
     
     fun stopGame() {
-        if (workerThread != null && workerThread!!.isAlive) {
+        val m = model
+        if (m != null && workerThread != null && workerThread!!.isAlive) {
+            // Attempt to autosave
+            Log.d("GLKGameEngine", "Attempting autosave...")
+            m.isAutosaving = true
+            sendInput("save")
+            
+            // Give it a tiny bit of time to process the save before sending quit
+            // This is slightly hacky due to the asynchronous nature of events
+            try { 
+                Thread.sleep(300) 
+            } catch (e: Exception) {}
+            m.isAutosaving = false
+
             // Attempt to quit gracefully first
             sendInput("quit")
             sendInput("y")

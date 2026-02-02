@@ -147,6 +147,7 @@ public class GLKModel {
     public GLKStyleSpan mTADSStatusStyle = null;
 
     // MUTABLE DATA
+    public boolean isAutosaving = false;
     public boolean mSyncScreenBG;
     @Nullable
     public GLKCharsetManager mCharsetMgr;
