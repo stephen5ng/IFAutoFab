@@ -416,7 +416,14 @@ public final class GLKController {
      */
     @SuppressWarnings("unused")   // this is called by the JNI layer
     public static void glk_exit(@NonNull GLKModel m) throws InterruptedException {
-        // Display exit prompt and wait for user to hit a key
+        // Fabularium/Original behavior: Display exit prompt and wait for user to hit a key.
+        // Automotive behavior: Just exit. We don't want to block waiting for a keypress
+        // that the user might not know they need to provide.
+        if (DEBUG_GLK_CALLS) {
+            GLKLogger.debug("glk_exit called - returning immediately for cleaner shutdown.");
+        }
+
+        /*
         int curStrID = m.mStreamMgr.getCurrentOutputStream();
         if (curStrID != GLKConstants.NULL) {
             GLKTextBufferM w = m.mStreamMgr.getTextBuffer(curStrID);
@@ -430,6 +437,7 @@ public final class GLKController {
                 glk_select(m, ev);
             } while (ev.type != GLKConstants.evtype_CharInput);
         }
+        */
     }
 
     /**
