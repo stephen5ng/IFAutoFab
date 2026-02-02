@@ -24,6 +24,19 @@ object GLKGameEngine {
     private var ttsManager: TTSManager? = null
     var isTtsEnabled: Boolean = true
 
+    private val ttsBuffer = StringBuilder()
+    private val ttsHandler = Handler(Looper.getMainLooper())
+    private val speakRunnable = Runnable {
+        val text = synchronized(ttsBuffer) {
+            val result = ttsBuffer.toString()
+            ttsBuffer.clear()
+            result
+        }
+        if (text.isNotBlank()) {
+            ttsManager?.speak(text)
+        }
+    }
+
     fun startGame(application: Application, gamePath: String) {
         Thread {
             stopGame()
@@ -69,7 +82,12 @@ object GLKGameEngine {
                         val newText = buffer.substring(lastTextLength).toString()
                         TextOutputInterceptor.appendText(newText)
                         if (isTtsEnabled && !isSystemMessage(newText)) {
-                            ttsManager?.speak(newText)
+                            // Accumulate text and debounce: wait 200ms after last output before speaking
+                            synchronized(ttsBuffer) {
+                                ttsBuffer.append(newText)
+                            }
+                            ttsHandler.removeCallbacks(speakRunnable)
+                            ttsHandler.postDelayed(speakRunnable, 200)
                         }
                         lastTextLength = buffer.length
                     }
@@ -164,6 +182,10 @@ object GLKGameEngine {
         }
         model = null
         workerThread = null
+        ttsHandler.removeCallbacks(speakRunnable)
+        synchronized(ttsBuffer) {
+            ttsBuffer.clear()
+        }
         TextOutputInterceptor.clear()
     }
 
