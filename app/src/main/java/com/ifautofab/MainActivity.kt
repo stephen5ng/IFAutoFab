@@ -129,6 +129,15 @@ class MainActivity : AppCompatActivity() {
             GLKGameEngine.sendInput("n")
         }
 
+        // Quick shortcut handlers
+        findViewById<Button>(R.id.lookButton).setOnClickListener {
+            GLKGameEngine.sendInput("look")
+        }
+
+        findViewById<Button>(R.id.inventoryButton).setOnClickListener {
+            GLKGameEngine.sendInput("i")
+        }
+
         startOutputPolling()
 
         debugReceiver = object : BroadcastReceiver() {
