@@ -6,6 +6,14 @@
         android:title="Select Game"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_save"
+        android:title="Save Game"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_restore"
+        android:title="Restore Game"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_restart"
         android:title="Restart Game"
         app:showAsAction="never" />

@@ -2157,18 +2157,19 @@ public final class GLKController {
      */
     @SuppressWarnings("unused")   // this is called by the JNI layer
     public static int glk_fileref_create_by_prompt(@NonNull GLKModel m, int usage, int fmode, int rock) throws InterruptedException {
-        if (m.isAutosaving && (usage & GLKConstants.fileusage_TypeMask) == GLKConstants.fileusage_SavedGame) {
-            String path = GLKFileRef.getGLKPath(m, "autosave", usage);
+        if ((usage & GLKConstants.fileusage_TypeMask) == GLKConstants.fileusage_SavedGame) {
+            String filename = m.isAutosaving ? "autosave" : "manual_save";
+            String path = GLKFileRef.getGLKPath(m, filename, usage);
             GLKFileRef f = new GLKFileRef(path, usage, rock);
             m.mStreamMgr.addStreamToPool(f);
-            GLKLogger.debug("glk_fileref_create_by_prompt: autosaving to " + path);
+            GLKLogger.debug("glk_fileref_create_by_prompt: using path " + path + " (autosaving=" + m.isAutosaving + ")");
             return f.getStreamId();
         }
 
         // Fabularium used GLKScreen to prompt. We are headless/automotive.
         // We cannot prompt the user for a file path in the same way.
-        // Fail for now.
-        GLKLogger.warn("glk_fileref_create_by_prompt: prompting not supported in this environment.");
+        // Fail for now unless it's a save/restore.
+        GLKLogger.warn("glk_fileref_create_by_prompt: prompting not supported for usage " + usage);
         return GLKConstants.NULL;
     }
 

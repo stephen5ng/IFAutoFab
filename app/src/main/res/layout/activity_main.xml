@@ -24,14 +24,43 @@
                 android:textSize="24sp" />
         </ScrollView>
 
-        <!-- Quick Action Shortcuts (Look and Inventory) -->
-        <LinearLayout
+        <!-- Directional Pad and Quick Shortcuts -->
+        <GridLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:columnCount="3"
+            android:rowCount="3"
             android:layout_gravity="top|end"
-            android:padding="4dp">
+            android:padding="8dp">
 
+            <!-- Row 1 -->
+            <Button
+                android:id="@+id/upButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="U"
+                android:textSize="24sp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:backgroundTint="#22888888" />
+            <Button
+                android:id="@+id/northButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="⬆️"
+                android:textSize="24sp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:backgroundTint="#22888888" />
+            <View android:layout_width="60dp" android:layout_height="60dp" />
+
+            <!-- Row 2 -->
+            <Button
+                android:id="@+id/westButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="⬅️"
+                android:textSize="24sp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:backgroundTint="#22888888" />
             <Button
                 android:id="@+id/lookButton"
                 android:layout_width="60dp"
@@ -40,7 +69,32 @@
                 android:textSize="24sp"
                 style="?android:attr/buttonBarButtonStyle"
                 android:backgroundTint="#22888888" />
+            <Button
+                android:id="@+id/eastButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="➡️"
+                android:textSize="24sp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:backgroundTint="#22888888" />
 
+            <!-- Row 3 -->
+            <Button
+                android:id="@+id/downButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="D"
+                android:textSize="24sp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:backgroundTint="#22888888" />
+            <Button
+                android:id="@+id/southButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="⬇️"
+                android:textSize="24sp"
+                style="?android:attr/buttonBarButtonStyle"
+                android:backgroundTint="#22888888" />
             <Button
                 android:id="@+id/inventoryButton"
                 android:layout_width="60dp"
@@ -48,9 +102,8 @@
                 android:text="🎒"
                 android:textSize="24sp"
                 style="?android:attr/buttonBarButtonStyle"
-                android:backgroundTint="#22888888"
-                android:layout_marginStart="8dp" />
-        </LinearLayout>
+                android:backgroundTint="#22888888" />
+        </GridLayout>
     </FrameLayout>
 
     <!-- Y/N Buttons (for character input confirmations) -->

@@ -130,6 +130,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Quick shortcut handlers
+        findViewById<Button>(R.id.northButton).setOnClickListener { GLKGameEngine.sendInput("n") }
+        findViewById<Button>(R.id.southButton).setOnClickListener { GLKGameEngine.sendInput("s") }
+        findViewById<Button>(R.id.eastButton).setOnClickListener { GLKGameEngine.sendInput("e") }
+        findViewById<Button>(R.id.westButton).setOnClickListener { GLKGameEngine.sendInput("w") }
+        findViewById<Button>(R.id.upButton).setOnClickListener { GLKGameEngine.sendInput("u") }
+        findViewById<Button>(R.id.downButton).setOnClickListener { GLKGameEngine.sendInput("d") }
+        
         findViewById<Button>(R.id.lookButton).setOnClickListener {
             GLKGameEngine.sendInput("look")
         }
@@ -293,6 +300,14 @@ class MainActivity : AppCompatActivity() {
             R.id.action_select_game -> {
                 val intent = android.content.Intent(this, GameSelectionActivity::class.java)
                 gameSelectionLauncher.launch(intent)
+                true
+            }
+            R.id.action_save -> {
+                GLKGameEngine.sendInput("save")
+                true
+            }
+            R.id.action_restore -> {
+                GLKGameEngine.sendInput("restore")
                 true
             }
             R.id.action_restart -> {
