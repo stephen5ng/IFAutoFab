@@ -80,15 +80,42 @@ val debugReceiver = object : BroadcastReceiver() {
         GLKGameEngine.sendInput(command)
     }
 }
-registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"))
+registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"), Context.RECEIVER_EXPORTED)
 ```
+
+`RECEIVER_EXPORTED` is required on API 34+. Without it the app crashes on launch with a `SecurityException`.
 
 Send commands from ADB with no keyboard involved:
 ```bash
-adb shell am broadcast -a com.ifautofab.DEBUG_INPUT -e command "open mailbox"
+# Single-word commands: quotes don't matter
+adb shell am broadcast -a com.ifautofab.DEBUG_INPUT -e command "look"
+
+# Multi-word commands: wrap the entire am invocation in single quotes,
+# otherwise adb shell splits the value and interprets the extra words
+# as flags (e.g. "open mailbox" becomes pkg=mailbox in the intent).
+adb shell 'am broadcast -a com.ifautofab.DEBUG_INPUT -e command "open mailbox"'
 ```
 
-This completely bypasses the on-screen keyboard and its autocomplete. Works with spaces, punctuation, anything.
+This completely bypasses the on-screen keyboard and its autocomplete.
+
+---
+
+## Logcat Output Structure
+
+Each call to `TextOutputInterceptor.appendText()` produces one logcat line. The interpreter doesn't flush a whole turn at once — it outputs line by line as it renders. A typical turn in logcat looks like:
+
+```
+D GameOutput: >
+D GameOutput: open mailbox
+D GameOutput: Opening the small mailbox reveals a leaflet.
+D GameOutput:
+D GameOutput: >
+```
+
+Two things worth noting for scripting:
+
+- **The `>` prompt is a reliable "ready for input" signal.** It arrives as its own logcat line after every response. An automation loop can wait for it before sending the next command instead of using a fixed `sleep`.
+- **All lines within a turn share the same timestamp.** The interpreter flushes its output buffer in one go after processing a command, so logcat timestamps can be used to group lines into turns if needed.
 
 ---
 
@@ -103,11 +130,12 @@ With both changes in place, a full turn looks like this:
 CMD="$1"
 if [ -z "$CMD" ]; then echo "Usage: $0 <command>"; exit 1; fi
 
-# Send command
-adb shell am broadcast -a com.ifautofab.DEBUG_INPUT -e command "$CMD"
+# Send command. Single quotes around the am invocation are required
+# for multi-word commands — see "Accept commands via broadcast intent" above.
+adb shell 'am broadcast -a com.ifautofab.DEBUG_INPUT -e command "'"$CMD"'"'
 
 # Wait for interpreter to respond
-sleep 1
+sleep 2
 
 # Grab output (last N lines of GameOutput from logcat)
 # Assumes logcat is already streaming to session.log in background
@@ -122,11 +150,11 @@ adb logcat -s GameOutput:D > session.log &
 LOGCAT_PID=$!
 
 # Terminal 2 (or same script): run turns
-adb shell am broadcast -a com.ifautofab.DEBUG_INPUT -e command "open mailbox"
-sleep 1; grep -A5 "open mailbox" session.log
+adb shell 'am broadcast -a com.ifautofab.DEBUG_INPUT -e command "open mailbox"'
+sleep 2; grep -A5 "open mailbox" session.log
 
-adb shell am broadcast -a com.ifautofab.DEBUG_INPUT -e command "northeast"
-sleep 1; grep -A5 "northeast" session.log
+adb shell 'am broadcast -a com.ifautofab.DEBUG_INPUT -e command "northeast"'
+sleep 2; grep -A5 "northeast" session.log
 
 # ... etc
 
@@ -141,11 +169,18 @@ UIAutomator dump is still useful for verifying UI state rather than reading game
 - Checking that specific buttons are present/enabled
 - Confirming layout after a state change (e.g., did the game selection screen appear?)
 - Asserting the input field is cleared after SEND
+- Grabbing the **full** output text when you need the entire transcript (e.g. to verify autosave restore output that has scrolled off screen)
 
 ```bash
 adb shell uiautomator dump /sdcard/ui.xml
-# Then parse with grep or xmllint
+
+# Button presence check
 grep 'resource-id="com.ifautofab:id/sendButton"' /sdcard/ui.xml
+
+# Full game transcript — the text attribute is on the outputText node
+# which is a child of the scrollView node. It uses &#10; for newlines.
+grep -o 'scrollView[^<]*<[^<]*' /sdcard/ui.xml   # scrollView + first child
+# The text="..." attribute contains the full transcript, &#10;-delimited.
 ```
 
 Don't use it as the primary output channel — logcat is faster, streaming, and doesn't require parsing a bloated XML tree.
@@ -154,26 +189,27 @@ Don't use it as the primary output channel — logcat is faster, streaming, and 
 
 ## Bugs Found (Zork 1 session, 2026-02-01)
 
-### 1. Autosave restore prints "restore" twice
-When a game loads with an existing autosave, output shows:
+### 1. Autosave restore prints "restore" twice — FIXED
+When a game loads with an existing autosave, output showed:
 ```
 [Restoring autosave...]
 restore
 restore
 Ok.
 ```
-`GLKGameEngine.sendInput("restore")` (line 89) echoes the command via `window.putString(input + "\n")` (line 123 of `sendInput`). But bocfel also echoes line input as part of standard GLK `glk_char_input_event` processing. Double echo.
+`GLKGameEngine.sendInput("restore")` echoed the command via `window.putString(input + "\n")`, but bocfel also echoes line input as part of standard GLK processing. Double echo.
 
-### 2. First command after autorestore echoes twice
+**Fix:** Removed the manual echo (`window.putString`) from `sendInput()`. Bocfel echoes input itself after processing the line event. Verified via both logcat and UIAutomator full-text dump — autosave restore now shows a single `restore`.
+
+### 2. First command after autorestore echoes twice — FIXED
 Same root cause as #1. The first real command after restore showed:
 ```
 >open mailbox
 open mailbox
 Opening the small mailbox reveals a leaflet.
 ```
-Subsequent commands echoed only once. The manual echo in `sendInput` (line 123) conflicts with bocfel's own echo. The autorestore state seems to leave the interpreter's echo armed for one extra turn.
 
-**Fix candidate:** Remove the manual echo in `GLKGameEngine.sendInput()` (line 123: `window.putString(input + "\n")`). Bocfel already echoes input. If other interpreters don't echo, this should be conditional on the interpreter, not unconditional.
+**Fix:** Same as #1 — removing the manual echo resolved both. Verified with a 6-turn session; every command echoes exactly once.
 
-### 3. On-screen keyboard takes ~50% of display
+### 3. On-screen keyboard takes ~50% of display — OPEN
 The Google keyboard consumes roughly half the automotive display while typing. Only 2–3 lines of game output remain visible. For a text adventure this is severe. The debug broadcast intent approach (section above) sidesteps this entirely for automated testing. For interactive use, the keyboard should dismiss after SEND, or the TYPE input should use a smaller overlay.
