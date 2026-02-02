@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import android.provider.OpenableColumns
 import android.widget.Button
 import android.widget.EditText
@@ -79,6 +80,11 @@ class MainActivity : AppCompatActivity() {
             if (command.isNotEmpty()) {
                 GLKGameEngine.sendInput(command)
                 inputText.setText("")
+
+                // Dismiss keyboard and hide input container
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.hideSoftInputFromWindow(inputText.windowToken, 0)
+                findViewById<LinearLayout>(R.id.textInputContainer).visibility = android.view.View.GONE
             }
         }
         
