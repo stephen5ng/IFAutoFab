@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
             android:text="Welcome to IFAutoFab.\nSelect a game file to start."
-            android:textSize="14sp" />
+            android:textSize="24sp" />
     </ScrollView>
 
     <!-- Y/N Buttons (for character input confirmations) -->
@@ -36,7 +36,7 @@
             android:layout_height="64dp"
             android:layout_weight="1"
             android:text="YES (Y)"
-            android:textSize="18sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:backgroundTint="@android:color/holo_green_light"
             android:layout_marginEnd="8dp" />
@@ -47,7 +47,7 @@
             android:layout_height="64dp"
             android:layout_weight="1"
             android:text="NO (N)"
-            android:textSize="18sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:backgroundTint="@android:color/holo_red_light"
             android:layout_marginStart="8dp" />
@@ -59,12 +59,12 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:text="GAME ENDED - RETURN TO MENU"
-        android:textSize="18sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         android:backgroundTint="@android:color/holo_orange_light"
         android:visibility="gone"
         android:layout_marginTop="8dp" />
-
+    
     <!-- Text Input container (Hidden by default) -->
     <LinearLayout
         android:id="@+id/textInputContainer"
@@ -81,13 +81,15 @@
             android:layout_weight="1"
             android:hint="Type command..."
             android:imeOptions="actionSend"
-            android:inputType="text" />
+            android:inputType="text" 
+            android:textSize="20sp"/>
 
         <Button
             android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Send" />
+            android:text="Send" 
+            android:textSize="20sp"/>
     </LinearLayout>
 
     <!-- Consolidated Control Bar -->
@@ -104,6 +106,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Menu"
+            android:textSize="20sp"
             style="?android:attr/buttonBarButtonStyle" />
 
         <Button
@@ -112,7 +115,7 @@
             android:layout_height="64dp"
             android:layout_weight="1"
             android:text="Speak"
-            android:textSize="18sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:backgroundTint="@android:color/holo_blue_light"
             android:layout_marginStart="4dp"
@@ -124,7 +127,7 @@
             android:layout_height="wrap_content"
             android:textOn="TTS"
             android:textOff="TTS"
-            android:textSize="12sp"
+            android:textSize="20sp"
             android:checked="true" />
 
         <Button
@@ -132,6 +135,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Type"
+            android:textSize="20sp"
             style="?android:attr/buttonBarButtonStyle" />
     </LinearLayout>
 
