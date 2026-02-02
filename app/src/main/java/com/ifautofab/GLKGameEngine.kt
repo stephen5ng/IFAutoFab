@@ -23,6 +23,7 @@ object GLKGameEngine {
     private var workerThread: Thread? = null
     private var ttsManager: TTSManager? = null
     var isTtsEnabled: Boolean = true
+    private var isGameStarting: Boolean = false
 
     var onGameFinishedListener: (() -> Unit)? = null
     
@@ -51,6 +52,7 @@ object GLKGameEngine {
         // Save for restart functionality
         lastApplication = application
         lastGamePath = gamePath
+        isGameStarting = true
 
         Thread {
             stopGame()
@@ -111,13 +113,18 @@ object GLKGameEngine {
                     if (buffer.length > lastTextLength) {
                         val newText = buffer.substring(lastTextLength).toString()
                         TextOutputInterceptor.appendText(newText)
-                        if (isTtsEnabled && !isSystemMessage(newText)) {
-                            // Accumulate text and debounce: wait 200ms after last output before speaking
-                            synchronized(ttsBuffer) {
-                                ttsBuffer.append(newText)
+                        if (isTtsEnabled) {
+                            // Split by line and filter out boilerplate so we don't speak it
+                            val lines = newText.split("\n")
+                            val cleanLines = lines.filter { !isIgnoredText(it) }
+                            
+                            if (cleanLines.isNotEmpty()) {
+                                synchronized(ttsBuffer) {
+                                    ttsBuffer.append(cleanLines.joinToString("\n"))
+                                }
+                                ttsHandler.removeCallbacks(speakRunnable)
+                                ttsHandler.postDelayed(speakRunnable, 200)
                             }
-                            ttsHandler.removeCallbacks(speakRunnable)
-                            ttsHandler.postDelayed(speakRunnable, 200)
                         }
                         lastTextLength = buffer.length
                     }
@@ -159,6 +166,11 @@ object GLKGameEngine {
     }
 
     fun sendInput(input: String) {
+        // Any user input (excluding internal auto-restore) clears the startup filtering phase
+        if (!input.equals("restore", ignoreCase = true) && !input.equals("save", ignoreCase = true)) {
+            isGameStarting = false
+        }
+        
         // Intercept "restart" command - the game's Y/N confirmation is broken,
         // so we restart at the app level instead
         if (input.trim().equals("restart", ignoreCase = true)) {
@@ -184,6 +196,7 @@ object GLKGameEngine {
                     }
 
                     skipAutosave = false
+                    isGameStarting = true
                     startGame(app, path)
                 }.start()
             }
@@ -333,8 +346,37 @@ object GLKGameEngine {
         return false
     }
 
-    private fun isSystemMessage(text: String): Boolean {
+    private fun isIgnoredText(text: String): Boolean {
         val trimmed = text.trim()
-        return trimmed.startsWith("[") && trimmed.endsWith("]")
+        if (trimmed.isEmpty()) return true
+        
+        // 1. Bracketed system messages: [Starting new game], [Restoring...]
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) return true
+        
+        // 2. Interactive Fiction / Infocom technical boilerplate
+        // ONLY filter these at the very start of the game to avoid missing mid-game narrative
+        if (!isGameStarting) return false
+
+        val lower = trimmed.lowercase()
+        val technicalMarkers = listOf(
+            "copyright", 
+            "rights reserved", 
+            "trademark of", 
+            "serial number",
+            "release",
+            "interactive fiction",
+            "infocom",
+            "registered trademark"
+        )
+        
+        // If it looks like a technical line (and contains at least one marker), skip it
+        if (technicalMarkers.any { lower.contains(it) }) {
+            // Additional check: technical lines usually have specific metadata markers
+            if (lower.contains("copyright") || lower.contains("(c)") || lower.contains("/") || Regex("\\d{5,8}").containsMatchIn(lower)) {
+                return true
+            }
+        }
+        
+        return false
     }
 }
