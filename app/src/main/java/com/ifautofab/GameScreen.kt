@@ -28,6 +28,15 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
 
         override fun onStatusUpdated(status: String) {
         }
+
+        override fun onClear() {
+            handler.post {
+                synchronized(history) {
+                    history.clear()
+                }
+                invalidate()
+            }
+        }
     }
 
     init {
