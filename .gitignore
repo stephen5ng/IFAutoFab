@@ -26,3 +26,8 @@ Thumbs.db
 
 # Games
 app/src/main/assets/games/
+*.z3
+*.z5
+*.z8
+*.ulx
+*.gblorb
