@@ -18,7 +18,7 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
                 override fun onStart(utteranceId: String?) {}
                 override fun onDone(utteranceId: String?) {
                     if (utteranceId == "beep_trigger") {
-                        toneGenerator.startTone(android.media.ToneGenerator.TONE_PROP_ACK)
+                        toneGenerator.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 100)
                     }
                 }
                 override fun onError(utteranceId: String?) {}
