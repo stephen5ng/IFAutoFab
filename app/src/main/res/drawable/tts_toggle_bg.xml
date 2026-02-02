@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Checked State (TTS ON) -->
+    <item android:state_checked="true">
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#F0F0F0" />
+                    <corners android:radius="8dp" />
+                </shape>
+            </item>
+            <!-- Thick Green Bottom Indicator -->
+            <item android:top="52dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#4CAF50" />
+                    <corners android:bottomLeftRadius="8dp" android:bottomRightRadius="8dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    
+    <!-- Unchecked State (TTS OFF) -->
+    <item android:state_checked="false">
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#E0E0E0" />
+                    <corners android:radius="8dp" />
+                </shape>
+            </item>
+            <!-- Grey Bottom Indicator -->
+            <item android:top="52dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#9E9E9E" />
+                    <corners android:bottomLeftRadius="8dp" android:bottomRightRadius="8dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</selector>

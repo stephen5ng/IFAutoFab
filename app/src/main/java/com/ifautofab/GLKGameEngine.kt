@@ -298,6 +298,12 @@ object GLKGameEngine {
         
         model = null
         workerThread = null
+        
+        // Abort any pending speech from the previous session
+        ttsManager?.stop()
+        ttsManager?.shutdown()
+        ttsManager = null
+        
         ttsHandler.removeCallbacks(speakRunnable)
         synchronized(ttsBuffer) {
             ttsBuffer.clear()
