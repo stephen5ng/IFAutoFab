@@ -116,6 +116,16 @@ public final class GLKController {
         // create a new thread object via a call to create().
     }
 
+    /**
+     * Clears all pending events from the queue.
+     * Use this when restarting or switching games to prevent old events
+     * from being processed by the new game instance.
+     */
+    public static void flushEvents() {
+        GLKLogger.debug("GLKController: flushing " + mEventQueue.size() + " events");
+        mEventQueue.clear();
+    }
+
     @SuppressWarnings("JniMissingFunction")
     private static native int runTerp(@NonNull String terpLibName, @NonNull GLKModel m, @NonNull String[] args, @Nullable String outfilePath);
 
