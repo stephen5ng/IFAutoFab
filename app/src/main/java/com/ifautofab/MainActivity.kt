@@ -29,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var inputText: EditText
     private lateinit var scrollView: ScrollView
     private lateinit var debugReceiver: BroadcastReceiver
+    private lateinit var ynButtonContainer: LinearLayout
+    private lateinit var textInputContainer: LinearLayout
 
     private val gameSelectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -52,10 +54,9 @@ class MainActivity : AppCompatActivity() {
         outputText = findViewById(R.id.outputText)
         inputText = findViewById(R.id.inputText)
         scrollView = findViewById(R.id.scrollView)
+        ynButtonContainer = findViewById(R.id.ynButtonContainer)
+        textInputContainer = findViewById(R.id.textInputContainer)
 
-
-        
-        val textInputContainer = findViewById<LinearLayout>(R.id.textInputContainer)
         val keyboardToggle = findViewById<Button>(R.id.keyboardToggle)
         
         keyboardToggle.setOnClickListener {
@@ -112,28 +113,76 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Return to Menu button
+        val returnToMenuButton = findViewById<Button>(R.id.returnToMenuButton)
+        returnToMenuButton.setOnClickListener {
+             // Go to Game Selection screen
+             val intent = android.content.Intent(this, GameSelectionActivity::class.java)
+             intent.flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+             startActivity(intent)
+             finish() 
+        }
+
+        // Y/N button handlers
+        findViewById<Button>(R.id.yesButton).setOnClickListener {
+            GLKGameEngine.sendInput("y")
+        }
+
+        findViewById<Button>(R.id.noButton).setOnClickListener {
+            GLKGameEngine.sendInput("n")
+        }
 
         startOutputPolling()
 
         debugReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
+                if (intent.hasExtra("load_game")) {
+                    val gameName = intent.getStringExtra("load_game")
+                    if (gameName != null) {
+                        returnToMenuButton.visibility = android.view.View.GONE
+                        startBundledGame(gameName)
+                    }
+                    return
+                }
                 val command = intent.getStringExtra("command") ?: return
                 GLKGameEngine.sendInput(command)
             }
         }
         registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"), Context.RECEIVER_EXPORTED)
 
-        if (!GLKGameEngine.isRunning()) {
+        if (intent.hasExtra("game_path")) {
+            val path = intent.getStringExtra("game_path")
+            val name = intent.getStringExtra("game_name")
+            if (path != null) {
+                if (name != null) {
+                    getSharedPreferences("IFAutoFab", MODE_PRIVATE)
+                            .edit().putString("last_game", name).apply()
+                    updateTitle(name)
+                }
+                returnToMenuButton.visibility = android.view.View.GONE
+                GLKGameEngine.startGame(application, path)
+            }
+        } else if (!GLKGameEngine.isRunning()) {
+            returnToMenuButton.visibility = android.view.View.GONE
             resumeOrStartDefaultGame()
+        }
+
+        setupGameEndListener()
+    }
+
+    private fun setupGameEndListener() {
+        GLKGameEngine.onGameFinishedListener = {
+             runOnUiThread {
+                 // Hide other controls
+                 ynButtonContainer.visibility = android.view.View.GONE
+                 textInputContainer.visibility = android.view.View.GONE
+                 
+                 // Show "Return to Menu" button
+                 findViewById<Button>(R.id.returnToMenuButton).visibility = android.view.View.VISIBLE
+             }
         }
     }
     
-
-
-
-
-
-
     private val outputListener = object : TextOutputInterceptor.OutputListener {
         override fun onTextAppended(text: String) {
             runOnUiThread {
@@ -141,6 +190,8 @@ class MainActivity : AppCompatActivity() {
                 scrollView.post {
                     scrollView.fullScroll(ScrollView.FOCUS_DOWN)
                 }
+                // Check if we should show Y/N buttons
+                updateInputMode()
             }
         }
 
@@ -152,6 +203,21 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 outputText.text = ""
             }
+        }
+    }
+
+    private fun updateInputMode() {
+        // Check if the interpreter is waiting for confirmation (Char input OR text prompt)
+        val isConfirmationMode = GLKGameEngine.isWaitingForConfirmation()
+
+        if (isConfirmationMode) {
+            // Show Y/N buttons, hide text input
+            ynButtonContainer.visibility = android.view.View.VISIBLE
+            textInputContainer.visibility = android.view.View.GONE
+        } else {
+            // Hide Y/N buttons
+            ynButtonContainer.visibility = android.view.View.GONE
+            // Keep text input hidden unless user toggles it
         }
     }
 
@@ -186,20 +252,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startBundledGame(assetName: String) {
-        val file = File(cacheDir, assetName)
-        try {
-            assets.open("games/$assetName").use { input ->
-                FileOutputStream(file).use { output ->
+        // Stop any existing game
+        GLKGameEngine.stopGame()
+        
+        // Hide "Game Ended" button if visible
+        runOnUiThread {
+            findViewById<Button>(R.id.returnToMenuButton).visibility = android.view.View.GONE
+        }
+        
+        // Copy asset to internal storage
+        val outFile = File(filesDir, assetName)
+        if (!outFile.exists()) {
+            assets.open("games/$assetName").use { input -> // Changed to "games/$assetName" to match original logic
+                outFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
             }
-            getSharedPreferences("IFAutoFab", MODE_PRIVATE)
-                .edit().putString("last_game", assetName).apply()
-            updateTitle(assetName)
-            GLKGameEngine.startGame(application, file.absolutePath)
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
+        
+        getSharedPreferences("IFAutoFab", MODE_PRIVATE) // Added back shared preferences update
+            .edit().putString("last_game", assetName).apply()
+        updateTitle(assetName)
+        GLKGameEngine.startGame(application, outFile.absolutePath)
     }
 
     private fun updateTitle(gameName: String) {

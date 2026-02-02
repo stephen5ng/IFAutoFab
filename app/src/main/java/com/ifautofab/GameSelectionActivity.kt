@@ -67,12 +67,24 @@ class GameSelectionActivity : AppCompatActivity() {
     }
 
     private fun returnResult(path: String, name: String) {
-        val intent = Intent().apply {
-            putExtra("game_path", path)
-            putExtra("game_name", name)
+        if (callingActivity != null) {
+            // We were started for a result (e.g. from valid MainActivity "New Game")
+            val intent = Intent().apply {
+                putExtra("game_path", path)
+                putExtra("game_name", name)
+            }
+            setResult(Activity.RESULT_OK, intent)
+            finish()
+        } else {
+            // We were started standalone (e.g. after App Quit, or as Launcher)
+            val intent = Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra("game_path", path)
+                putExtra("game_name", name)
+            }
+            startActivity(intent)
+            finish()
         }
-        setResult(Activity.RESULT_OK, intent)
-        finish()
     }
 
     private fun copyUriToInternalStorage(uri: Uri): File? {

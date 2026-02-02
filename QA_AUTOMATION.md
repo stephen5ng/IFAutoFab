@@ -121,7 +121,7 @@ Two things worth noting for scripting:
 
 ## Automation Loop Pattern
 
-With both changes in place, a full turn looks like this:
+With both changes in place, a full turn looks like:
 
 ```bash
 #!/bin/bash
@@ -184,6 +184,48 @@ grep -o 'scrollView[^<]*<[^<]*' /sdcard/ui.xml   # scrollView + first child
 ```
 
 Don't use it as the primary output channel — logcat is faster, streaming, and doesn't require parsing a bloated XML tree.
+
+---
+
+## UI State Verification Strategy - "Game Ended" Example (2026-02-02)
+
+To verify complex UI states, like a "Game Ended" screen where inputs are replaced by a "Return to Menu" button, rely on UI dumps rather than screencaps.
+
+### The Problem with Screencaps
+- Binary blobs are fast to capture but hard for AI to parse.
+- "Is the text visible?" works better if you can *read* the text from XML.
+
+### The UI Dump Loop
+For validating a state change (like finishing a game):
+
+```bash
+# 1. Trigger the state change
+adb shell 'am broadcast -a com.ifautofab.DEBUG_INPUT -e command "quit"'
+sleep 2
+adb shell 'am broadcast -a com.ifautofab.DEBUG_INPUT -e command "y"'
+sleep 3  # Wait for UI update
+
+# 2. Dump the UI hierarchy
+adb shell uiautomator dump /sdcard/view_dump.xml
+adb pull /sdcard/view_dump.xml view_dump.xml
+
+# 3. Assert on the XML content
+# Check if the "Return to Menu" button exists
+grep -oE '<node[^>]*text="GAME ENDED - RETURN TO MENU"[^>]*>' view_dump.xml
+```
+
+This method is robust against screen resolution changes and layout tweaks, unlike coordinate tapping or image matching.
+
+---
+
+## Output Persistence (Lifecycle Awareness)
+
+**Pitfall:** `stopGame()` or `onDestroy()` often clear logs/buffers.
+**Fix:** Ensure your engine cleanup methods have a `clearOutput` flag if you need to read the state *after* the game dies.
+
+Example found in `GLKGameEngine`:
+- `stopGame()` was clearing `TextOutputInterceptor`, erasing the "Game Ended" message from the UI instantaneously.
+- **Solution:** Added `stopGame(clearOutput: Boolean = true)` to allow `onGameFinishedListener` to call `stopGame(false)`, preserving the final text for the user to read.
 
 ---
 
