@@ -70,12 +70,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.widget.ToggleButton>(R.id.ttsQuickToggle).setOnCheckedChangeListener { _, isChecked ->
             GLKGameEngine.isTtsEnabled = isChecked
         }
-        
-        val newGameButton = findViewById<Button>(R.id.newGameButton)
-        newGameButton.setOnClickListener {
-            val intent = android.content.Intent(this, GameSelectionActivity::class.java)
-            gameSelectionLauncher.launch(intent)
-        }
 
         findViewById<Button>(R.id.sendButton).setOnClickListener {
             val command = inputText.text.toString()
@@ -275,6 +269,26 @@ class MainActivity : AppCompatActivity() {
             .edit().putString("last_game", assetName).apply()
         updateTitle(assetName)
         GLKGameEngine.startGame(application, outFile.absolutePath)
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_select_game -> {
+                val intent = android.content.Intent(this, GameSelectionActivity::class.java)
+                gameSelectionLauncher.launch(intent)
+                true
+            }
+            R.id.action_restart -> {
+                GLKGameEngine.sendInput("restart")
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun updateTitle(gameName: String) {
