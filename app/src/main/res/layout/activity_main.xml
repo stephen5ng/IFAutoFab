@@ -58,7 +58,7 @@
         android:id="@+id/returnToMenuButton"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:text="GAME ENDED - RETURN TO MENU"
+        android:text="GAME ENDED - SELECT GAME"
         android:textSize="24sp"
         android:textStyle="bold"
         android:backgroundTint="@android:color/holo_orange_light"
@@ -105,7 +105,7 @@
             android:id="@+id/newGameButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Menu"
+            android:text="Game"
             android:textSize="20sp"
             style="?android:attr/buttonBarButtonStyle" />
 
@@ -123,12 +123,15 @@
 
         <ToggleButton
             android:id="@+id/ttsQuickToggle"
-            android:layout_width="50dp"
-            android:layout_height="wrap_content"
+            android:layout_width="60dp"
+            android:layout_height="64dp"
             android:textOn="TTS"
             android:textOff="TTS"
             android:textSize="20sp"
-            android:checked="true" />
+            android:checked="true"
+            android:background="@drawable/tts_toggle_bg"
+            android:textAllCaps="true"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/keyboardToggle"
