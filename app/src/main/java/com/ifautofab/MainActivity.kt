@@ -187,7 +187,8 @@ class MainActivity : AppCompatActivity() {
         override fun onTextAppended(text: String) {
             runOnUiThread {
                 outputText.append(text)
-                scrollView.post {
+                // Post scroll to outputText's queue to ensure it runs after TextView layout
+                outputText.post {
                     scrollView.fullScroll(ScrollView.FOCUS_DOWN)
                 }
                 // Check if we should show Y/N buttons
