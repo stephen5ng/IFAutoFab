@@ -10,6 +10,7 @@ object TextOutputInterceptor {
     interface OutputListener {
         fun onTextAppended(text: String)
         fun onStatusUpdated(status: String)
+        fun onClear()
     }
 
     private val fullOutput = StringBuilder()
@@ -66,8 +67,8 @@ object TextOutputInterceptor {
         synchronized(fullOutput) {
             fullOutput.setLength(0)
         }
-        // Notify listeners of clear? Or just let them append new text? 
-        // For now, simpler implies just new text.
-        // We could add onClear() if needed.
+        for (listener in listeners) {
+            listener.onClear()
+        }
     }
 }

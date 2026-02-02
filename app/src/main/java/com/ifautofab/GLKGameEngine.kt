@@ -25,74 +25,74 @@ object GLKGameEngine {
     var isTtsEnabled: Boolean = true
 
     fun startGame(application: Application, gamePath: String) {
-        stopGame()
-        
-        ttsManager = TTSManager(application)
-        val gameFile = File(gamePath)
-        if (!gameFile.exists()) {
-            throw IllegalArgumentException("Game file not found: $gamePath")
-        }
-
-        val m = GLKModel(application)
-        val sharedPref = PreferenceManager.getDefaultSharedPreferences(application)
-        
-        // Fix for Android 10+ and multi-user Automotive: redirect storage to internal FilesDir
-        val internalAppDir = application.filesDir.absolutePath + "/IFAutoFab/"
-        val dir = File(internalAppDir)
-        if (!dir.exists()) {
-            val created = dir.mkdirs()
-            Log.d("GLK_DEBUG", "Created internalAppDir $internalAppDir: $created")
-        }
-        Log.d("GLK_DEBUG", "internalAppDir = $internalAppDir")
-        sharedPref.edit().putString("", internalAppDir).apply()
-
-        val ifid = gameFile.name.hashCode().toString()
-        val gameExt = gameFile.extension.lowercase()
-        val format = mapExtensionToFormat(gameExt)
-        Log.d("GLK_DEBUG", "gamePath = $gamePath, ext = $gameExt, format = $format")
-        
-        m.initialise(sharedPref, gamePath, format, ifid)
-        
-        // Fix: initialize screen size to avoid null pointer in getScreenSize()
-        m.setScreenSize(Point(1024, 768))
-        
-        model = m
-        lastTextLength = 0
-        
-        m.setViewUpdateListener {
-            val window = m.mStreamMgr.getFirstTextWindow()
+        Thread {
+            stopGame()
             
-            if (window is GLKTextBufferM) {
-                val buffer = window.getBuffer()
-                if (buffer.length > lastTextLength) {
-                    val newText = buffer.substring(lastTextLength).toString()
-                    TextOutputInterceptor.appendText(newText)
-                    if (isTtsEnabled) {
-                        ttsManager?.speak(newText)
+            val gameFile = File(gamePath)
+            if (!gameFile.exists()) {
+                Log.e("GLKGameEngine", "Game file not found: $gamePath")
+                return@Thread
+            }
+            
+            // Start new game session
+            TextOutputInterceptor.appendText("\n[Starting new game: ${gameFile.name}]\n")
+
+            ttsManager = TTSManager(application)
+
+            val m = GLKModel(application)
+            val sharedPref = PreferenceManager.getDefaultSharedPreferences(application)
+            
+            // Fix for Android 10+ and multi-user Automotive: redirect storage to internal FilesDir
+            val internalAppDir = application.filesDir.absolutePath + "/IFAutoFab/"
+            val dir = File(internalAppDir)
+            if (!dir.exists()) {
+                val created = dir.mkdirs()
+                Log.d("GLK_DEBUG", "Created internalAppDir $internalAppDir: $created")
+            }
+            sharedPref.edit().putString("", internalAppDir).apply()
+
+            val ifid = gameFile.name.hashCode().toString()
+            val gameExt = gameFile.extension.lowercase()
+            val format = mapExtensionToFormat(gameExt)
+            
+            m.initialise(sharedPref, gamePath, format, ifid)
+            m.setScreenSize(Point(1024, 768))
+            
+            model = m
+            lastTextLength = 0
+            
+            m.setViewUpdateListener {
+                val window = m.mStreamMgr.getFirstTextWindow()
+                if (window is GLKTextBufferM) {
+                    val buffer = window.getBuffer()
+                    if (buffer.length > lastTextLength) {
+                        val newText = buffer.substring(lastTextLength).toString()
+                        TextOutputInterceptor.appendText(newText)
+                        if (isTtsEnabled) {
+                            ttsManager?.speak(newText)
+                        }
+                        lastTextLength = buffer.length
                     }
-                    lastTextLength = buffer.length
                 }
             }
-        }
 
-        workerThread = GLKController.create(m)
-        workerThread?.start()
+            workerThread = GLKController.create(m)
+            workerThread?.start()
 
-        // Auto-restore if autosave exists
-        val autosavePath = m.mGameDataPath + "autosave" + GLKConstants.GLK_SAVE_EXT
-        if (File(autosavePath).exists()) {
-            Log.d("GLKGameEngine", "Autosave found at $autosavePath, attempting to restore...")
-            // We need to wait a bit for the terp to be ready for input
-            // In a better implementation, we'd wait for a line input request event
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                m.isAutosaving = true // reuse flag to bypass prompt in restore too
-                sendInput("restore")
-                // Wait another short bit for the restore to complete
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    m.isAutosaving = false
-                }, 500)
-            }, 1000)
-        }
+            // Auto-restore if autosave exists
+            val autosavePath = m.mGameDataPath + "autosave" + GLKConstants.GLK_SAVE_EXT
+            if (File(autosavePath).exists()) {
+                Log.d("GLKGameEngine", "Autosave found at $autosavePath, attempting to restore...")
+                Handler(Looper.getMainLooper()).postDelayed({
+                    TextOutputInterceptor.appendText("\n[Restoring autosave...]\n")
+                    m.isAutosaving = true
+                    sendInput("restore")
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        m.isAutosaving = false
+                    }, 500)
+                }, 1000)
+            }
+        }.start()
     }
 
     private fun mapExtensionToFormat(ext: String): String {
@@ -135,40 +135,39 @@ object GLKGameEngine {
     
     fun stopGame() {
         val m = model
-        if (m != null && workerThread != null && workerThread!!.isAlive) {
+        val thread = workerThread
+        if (m != null && thread != null && thread.isAlive) {
             // Attempt to autosave
             Log.d("GLKGameEngine", "Attempting autosave...")
+            TextOutputInterceptor.appendText("\n[Autosaving progress...]\n")
             m.isAutosaving = true
             sendInput("save")
             
-            // Give it a tiny bit of time to process the save before sending quit
-            // This is slightly hacky due to the asynchronous nature of events
+            // Give it time to process the save
             try { 
-                Thread.sleep(300) 
+                Thread.sleep(500) 
             } catch (e: Exception) {}
             m.isAutosaving = false
 
-            // Attempt to quit gracefully first
+            // Attempt to quit gracefully
             sendInput("quit")
             sendInput("y")
             sendInput("yes")
             
             try {
-                workerThread?.join(500)
+                thread.join(1000)
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             }
             
-            if (workerThread != null && workerThread!!.isAlive) {
+            if (thread.isAlive) {
                 Log.w("GLKGameEngine", "Worker thread did not stop gracefully. Interrupting.")
-                workerThread?.interrupt()
+                thread.interrupt()
             }
         }
+        model = null
         workerThread = null
         TextOutputInterceptor.clear()
-        
-        // Ensure model is reset or recreated for next run (handled in startGame)
-        model = null 
     }
 
     fun isRunning(): Boolean {

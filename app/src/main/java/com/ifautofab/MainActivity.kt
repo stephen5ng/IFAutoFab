@@ -30,7 +30,6 @@ class MainActivity : AppCompatActivity() {
             val name = result.data?.getStringExtra("game_name")
             if (path != null) {
                 GLKGameEngine.startGame(application, path)
-                outputText.append("\nStarting game: $name\n")
             }
         }
     }
@@ -119,6 +118,12 @@ class MainActivity : AppCompatActivity() {
 
         override fun onStatusUpdated(status: String) {
             // Optional: update status bar or title if needed
+        }
+
+        override fun onClear() {
+            runOnUiThread {
+                outputText.text = ""
+            }
         }
     }
 
