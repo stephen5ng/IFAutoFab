@@ -69,6 +69,9 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<android.widget.ToggleButton>(R.id.ttsQuickToggle).setOnCheckedChangeListener { _, isChecked ->
             GLKGameEngine.isTtsEnabled = isChecked
+            if (!isChecked) {
+                GLKGameEngine.stopSpeech()
+            }
         }
 
         findViewById<Button>(R.id.sendButton).setOnClickListener {

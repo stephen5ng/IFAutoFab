@@ -313,6 +313,14 @@ object GLKGameEngine {
         }
     }
 
+    fun stopSpeech() {
+        ttsManager?.stop()
+        ttsHandler.removeCallbacks(speakRunnable)
+        synchronized(ttsBuffer) {
+            ttsBuffer.clear()
+        }
+    }
+
     fun isRunning(): Boolean {
         return workerThread?.isAlive ?: false
     }
