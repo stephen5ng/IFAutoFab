@@ -34,6 +34,10 @@ class MainActivity : AppCompatActivity() {
             val path = result.data?.getStringExtra("game_path")
             val name = result.data?.getStringExtra("game_name")
             if (path != null) {
+                if (name != null) {
+                    getSharedPreferences("IFAutoFab", MODE_PRIVATE)
+                        .edit().putString("last_game", name).apply()
+                }
                 GLKGameEngine.startGame(application, path)
             }
         }
@@ -111,6 +115,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         registerReceiver(debugReceiver, IntentFilter("com.ifautofab.DEBUG_INPUT"), Context.RECEIVER_EXPORTED)
+
+        if (!GLKGameEngine.isRunning()) {
+            resumeOrStartDefaultGame()
+        }
     }
     
 
@@ -144,6 +152,45 @@ class MainActivity : AppCompatActivity() {
         // Clear previous content if any, relying on full history catch-up
         outputText.text = ""
         TextOutputInterceptor.addListener(outputListener)
+    }
+
+    private fun resumeOrStartDefaultGame() {
+        val lastGame = getSharedPreferences("IFAutoFab", MODE_PRIVATE).getString("last_game", null)
+        val gameName = lastGame ?: assets.list("games")?.firstOrNull() ?: return
+
+        // If already cached, start directly
+        val cached = File(cacheDir, gameName)
+        if (cached.exists()) {
+            GLKGameEngine.startGame(application, cached.absolutePath)
+            return
+        }
+
+        // If it's a bundled asset, extract and start
+        val bundled = assets.list("games") ?: emptyArray()
+        if (gameName in bundled) {
+            startBundledGame(gameName)
+            return
+        }
+
+        // Last game was external and no longer available; fall back to first bundled
+        val first = bundled.firstOrNull() ?: return
+        startBundledGame(first)
+    }
+
+    private fun startBundledGame(assetName: String) {
+        val file = File(cacheDir, assetName)
+        try {
+            assets.open("games/$assetName").use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            getSharedPreferences("IFAutoFab", MODE_PRIVATE)
+                .edit().putString("last_game", assetName).apply()
+            GLKGameEngine.startGame(application, file.absolutePath)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onDestroy() {
