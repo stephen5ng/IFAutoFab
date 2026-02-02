@@ -68,7 +68,7 @@ object GLKGameEngine {
                     if (buffer.length > lastTextLength) {
                         val newText = buffer.substring(lastTextLength).toString()
                         TextOutputInterceptor.appendText(newText)
-                        if (isTtsEnabled) {
+                        if (isTtsEnabled && !isSystemMessage(newText)) {
                             ttsManager?.speak(newText)
                         }
                         lastTextLength = buffer.length
@@ -169,5 +169,10 @@ object GLKGameEngine {
 
     fun isRunning(): Boolean {
         return workerThread?.isAlive ?: false
+    }
+
+    private fun isSystemMessage(text: String): Boolean {
+        val trimmed = text.trim()
+        return trimmed.startsWith("[") && trimmed.endsWith("]")
     }
 }
