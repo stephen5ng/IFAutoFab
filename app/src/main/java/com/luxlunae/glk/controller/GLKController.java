@@ -4499,12 +4499,30 @@ public final class GLKController {
                 Process.killProcess(Process.myPid());
             } else {
                 GLKLogger.debug("Terp finished normally.");
-                // mAct.runOnUiThread(new Runnable() {
-                //     @Override
-                //     public void run() {
-                //         mAct.finish();
-                //     }
-                // });
+
+                // Add a visual indicator to the game output so it doesn't look like a hang
+                int curStrID = mModel.mStreamMgr.getCurrentOutputStream();
+                if (curStrID != GLKConstants.NULL) {
+                    com.luxlunae.glk.model.stream.window.GLKTextBufferM w = mModel.mStreamMgr.getTextBuffer(curStrID);
+                    if (w != null) {
+                        try {
+                            // First, flush any pending game output to ensure the game's final message is displayed
+                            mModel.updateView();
+
+                            // Then add our wrapper message
+                            String msg = "\n\n*** GAME ENDED ***\nTo play again, please restart the game from the menu.";
+                            glk_put_string_stream(mModel, curStrID, msg.getBytes("ISO-8859-1"), false);
+
+                            // Finally, flush the wrapper message to the UI
+                            mModel.updateView();
+                        } catch (Exception e) {
+                            GLKLogger.warn("Failed to print exit message: " + e.getMessage());
+                        }
+                    }
+                }
+
+                // Notify listeners that the game has finished
+                mModel.notifyGameFinished();
             }
         }
     }
