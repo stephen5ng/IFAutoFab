@@ -31,3 +31,16 @@ app/src/main/assets/games/
 *.z8
 *.ulx
 *.gblorb
+
+# Sensitive Keys
+play-store-key.json
+*.jks
+
+# Project Specific
+.claude/
+.gradle_local/
+helloworld/
+samples/
+file_info.txt
+build_output.txt
+
