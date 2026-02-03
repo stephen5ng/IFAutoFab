@@ -15,9 +15,9 @@ class GameSession : Session() {
                 GLKGameEngine.isCarConnected = true
                 MediaSessionHelper.init(carContext)
                 MediaSessionHelper.onSkipToNextListener = {
-                    // Navigate to voice input screen on "Next" button press
+                    // Navigate to listening screen on "Next" button press
                     carContext.getCarService(androidx.car.app.ScreenManager::class.java)
-                        .push(VoiceInputScreen(carContext))
+                        .push(ListeningScreen(carContext))
                 }
             }
 

@@ -47,25 +47,33 @@ def deploy():
     print(f"Successfully uploaded bundle version {version_code}")
 
     # Assign bundle to track
-    # Note: Using 'draft' status because the app is currently in a draft state in the console
-    print(f"Assigning version {version_code} to {TRACK} track as draft...")
-    track_request = service.edits().tracks().update(
-        packageName=PACKAGE_NAME,
-        editId=edit_id,
-        track=TRACK,
-        body={
-            'releases': [{
-                'versionCodes': [str(version_code)],
-                'status': 'draft'
-            }]
-        }
-    )
-    track_request.execute()
+    def update_track(status):
+        print(f"Assigning version {version_code} to {TRACK} track as {status}...")
+        track_request = service.edits().tracks().update(
+            packageName=PACKAGE_NAME,
+            editId=edit_id,
+            track=TRACK,
+            body={
+                'releases': [{
+                    'versionCodes': [str(version_code)],
+                    'status': status
+                }]
+            }
+        )
+        track_request.execute()
 
-    # Commit the edit
-    print("Committing changes to Google Play...")
-    commit_request = service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id)
-    commit_request.execute()
+    try:
+        update_track('completed')
+        print("Committing changes to Google Play...")
+        service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id).execute()
+    except Exception as e:
+        if "Only releases with status draft may be created on draft app" in str(e):
+            print("App is still in 'Draft' state. Falling back to draft release...")
+            update_track('draft')
+            service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id).execute()
+        else:
+            raise e
+
     print("Deployment successful! Check the Google Play Console to review and roll out.")
 
 if __name__ == '__main__':

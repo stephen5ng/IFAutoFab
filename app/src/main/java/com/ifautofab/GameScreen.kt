@@ -110,7 +110,7 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
                 Action.Builder()
                     .setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, R.drawable.ic_mic)).build())
                     .setOnClickListener {
-                        screenManager.push(VoiceInputScreen(carContext))
+                        screenManager.push(ListeningScreen(carContext))
                     }
                     .build()
             )
