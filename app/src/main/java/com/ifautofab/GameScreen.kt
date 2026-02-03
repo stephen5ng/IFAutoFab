@@ -3,6 +3,7 @@ package com.ifautofab
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.model.*
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
@@ -55,21 +56,52 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
     override fun onGetTemplate(): Template {
         val listBuilder = ItemList.Builder()
         
-        synchronized(history) {
+        // Add Quick Commands at the top
+        listBuilder.addItem(
+            Row.Builder()
+                .setTitle("Commands...")
+                .setOnClickListener { screenManager.push(CommandScreen(carContext)) }
+                .build()
+        )
+        
+        // Add cardinal directions as quick taps
+        val directions = listOf("n" to "North", "s" to "South", "e" to "East", "w" to "West")
+        directions.forEach { (cmd, label) ->
+            listBuilder.addItem(
+                Row.Builder()
+                    .setTitle(label)
+                    .setOnClickListener { GLKGameEngine.sendInput(cmd) }
+                    .build()
+            )
+        }
+
+        synchronized(TextOutputInterceptor) {
+            val history = TextOutputInterceptor.getHistory()
             if (history.isEmpty()) {
                 listBuilder.addItem(
                     Row.Builder()
-                        .setTitle("No output yet")
-                        .addText("Select a game on your phone to begin.")
+                        .setTitle("Welcome to IFAutoFab")
+                        .addText("Pick a game on your phone to start.")
                         .build()
                 )
             } else {
-                history.forEach { para ->
-                    listBuilder.addItem(
-                        Row.Builder()
-                            .setTitle(para)
-                            .build()
-                    )
+                // Show the last 15 paragraphs. Skip rows that are JUST the prompt '>' to save space
+                history.filter { it.trim() != ">" }.takeLast(15).forEach { para ->
+                    val lines = para.split("\n")
+                    val titleText = lines.firstOrNull() ?: para
+                    val bodyText = if (lines.size > 1) para.substringAfter("\n") else null
+                    
+                    val row = Row.Builder()
+                        .setTitle(titleText)
+                    
+                    if (bodyText != null) {
+                        row.addText(bodyText)
+                    } else if (titleText.length > 40) {
+                        // If it's a long single line, also add it as text so it can wrap/not truncate
+                        row.addText(titleText)
+                    }
+                    
+                    listBuilder.addItem(row.build())
                 }
             }
         }
@@ -77,18 +109,16 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
         val actionStrip = ActionStrip.Builder()
             .addAction(
                 Action.Builder()
-                    .setTitle("Commands")
+                    .setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, R.drawable.ic_mic)).build())
                     .setOnClickListener {
-                        screenManager.push(CommandScreen(carContext))
+                        screenManager.push(VoiceInputScreen(carContext))
                     }
                     .build()
             )
             .addAction(
                 Action.Builder()
-                    .setTitle("Voice")
-                    .setOnClickListener {
-                        screenManager.push(VoiceInputScreen(carContext))
-                    }
+                    .setTitle("Undo")
+                    .setOnClickListener { GLKGameEngine.sendInput("undo") }
                     .build()
             )
             .build()
