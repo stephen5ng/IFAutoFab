@@ -57,6 +57,11 @@ class MainActivity : AppCompatActivity() {
         ynButtonContainer = findViewById(R.id.ynButtonContainer)
         textInputContainer = findViewById(R.id.textInputContainer)
 
+        // Request Record Audio permission for voice input
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+        }
+
         val keyboardToggle = findViewById<Button>(R.id.keyboardToggle)
         
         keyboardToggle.setOnClickListener {
@@ -178,6 +183,16 @@ class MainActivity : AppCompatActivity() {
         } else if (!GLKGameEngine.isRunning()) {
             returnToMenuButton.visibility = android.view.View.GONE
             resumeOrStartDefaultGame()
+        }
+
+        // Initialize MediaSession to intercept "Next" button
+        MediaSessionHelper.init(this)
+        MediaSessionHelper.onSkipToNextListener = {
+            if (!GLKGameEngine.isCarConnected) {
+                runOnUiThread {
+                    findViewById<Button>(R.id.voiceInputButton).performClick()
+                }
+            }
         }
 
         setupGameEndListener()
@@ -332,6 +347,7 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(debugReceiver)
         GLKGameEngine.stopGame()
         TextOutputInterceptor.removeListener(outputListener)
+        MediaSessionHelper.shutdown()
     }
 
 

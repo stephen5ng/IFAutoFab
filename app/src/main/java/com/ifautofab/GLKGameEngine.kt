@@ -24,6 +24,7 @@ object GLKGameEngine {
     private var ttsManager: TTSManager? = null
     var isTtsEnabled: Boolean = true
     private var isGameStarting: Boolean = false
+    var isCarConnected: Boolean = false
 
     var onGameFinishedListener: (() -> Unit)? = null
     

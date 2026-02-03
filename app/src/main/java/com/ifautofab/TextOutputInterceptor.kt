@@ -64,6 +64,12 @@ object TextOutputInterceptor {
             return fullOutput.toString()
         }
     }
+
+    fun getHistory(): List<String> {
+        synchronized(fullOutput) {
+            return fullOutput.split("\n\n")
+        }
+    }
     
     fun clear() {
         synchronized(fullOutput) {
