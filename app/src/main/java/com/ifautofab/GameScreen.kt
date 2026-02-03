@@ -85,19 +85,18 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
                         .build()
                 )
             } else {
-                // Show the last 15 paragraphs. Skip rows that are JUST the prompt '>' to save space
-                history.filter { it.trim() != ">" }.takeLast(15).forEach { para ->
-                    val lines = para.split("\n")
-                    val titleText = lines.firstOrNull() ?: para
-                    val bodyText = if (lines.size > 1) para.substringAfter("\n") else null
+                // Show the last 15 paragraphs. Skip rows that are empty or just the prompt '>'
+                history.filter { it.isNotBlank() && it.trim() != ">" }.takeLast(15).forEach { para ->
+                    val lines = para.trim().split("\n")
+                    val titleText = lines.firstOrNull()?.takeIf { it.isNotBlank() } ?: "..."
+                    val bodyText = if (lines.size > 1) lines.drop(1).joinToString("\n") else null
                     
                     val row = Row.Builder()
                         .setTitle(titleText)
                     
-                    if (bodyText != null) {
+                    if (!bodyText.isNullOrBlank()) {
                         row.addText(bodyText)
                     } else if (titleText.length > 40) {
-                        // If it's a long single line, also add it as text so it can wrap/not truncate
                         row.addText(titleText)
                     }
                     
