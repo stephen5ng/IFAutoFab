@@ -10,8 +10,8 @@ android {
         applicationId = "com.ifautofab"
         minSdk = 29
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.15"
+        versionCode = 19
+        versionName = "1.18"
 
         externalNativeBuild {
             cmake {

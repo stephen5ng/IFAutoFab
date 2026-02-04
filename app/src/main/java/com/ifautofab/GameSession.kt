@@ -15,9 +15,7 @@ class GameSession : Session() {
                 GLKGameEngine.isCarConnected = true
                 MediaSessionHelper.init(carContext)
                 MediaSessionHelper.onSkipToNextListener = {
-                    android.util.Log.d("IFAutoFab", "Media button: SkipToNext received")
-                    // Navigate to listening screen on "Next" button press
-                    // MUST be on main thread
+                    android.util.Log.d("IFAutoFab", "Media button triggered - pushing ListeningScreen")
                     val handler = android.os.Handler(android.os.Looper.getMainLooper())
                     handler.post {
                         try {
