@@ -63,17 +63,6 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
                 .setOnClickListener { screenManager.push(CommandScreen(carContext)) }
                 .build()
         )
-        
-        // Add cardinal directions as quick taps
-        val directions = listOf("n" to "North", "s" to "South", "e" to "East", "w" to "West")
-        directions.forEach { (cmd, label) ->
-            listBuilder.addItem(
-                Row.Builder()
-                    .setTitle(label)
-                    .setOnClickListener { GLKGameEngine.sendInput(cmd) }
-                    .build()
-            )
-        }
 
         synchronized(TextOutputInterceptor) {
             val history = TextOutputInterceptor.getHistory()
@@ -85,8 +74,8 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
                         .build()
                 )
             } else {
-                // Show the last 15 paragraphs. Skip rows that are empty or just the prompt '>'
-                history.filter { it.isNotBlank() && it.trim() != ">" }.takeLast(15).forEach { para ->
+                // Show the last 15 paragraphs, reversed so newest is at the top (avoiding scroll reset issues)
+                history.filter { it.isNotBlank() && it.trim() != ">" }.takeLast(15).reversed().forEach { para ->
                     val lines = para.trim().split("\n")
                     val titleText = lines.firstOrNull()?.takeIf { it.isNotBlank() } ?: "..."
                     val bodyText = if (lines.size > 1) lines.drop(1).joinToString("\n") else null
@@ -116,8 +105,8 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
             )
             .addAction(
                 Action.Builder()
-                    .setTitle("Undo")
-                    .setOnClickListener { GLKGameEngine.sendInput("undo") }
+                    .setTitle("Look")
+                    .setOnClickListener { GLKGameEngine.sendInput("look") }
                     .build()
             )
             .build()
