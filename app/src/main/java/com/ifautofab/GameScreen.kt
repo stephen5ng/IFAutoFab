@@ -114,7 +114,7 @@ class GameScreen(carContext: CarContext) : Screen(carContext) {
         return ListTemplate.Builder()
             .setSingleList(listBuilder.build())
             .setTitle("IFAutoFab")
-            .setHeaderAction(Action.APP_ICON)
+            .setHeaderAction(Action.Builder().setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, R.mipmap.ic_launcher)).build()).build())
             .setActionStrip(actionStrip)
             .build()
     }

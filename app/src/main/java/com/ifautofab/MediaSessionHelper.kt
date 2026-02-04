@@ -1,6 +1,7 @@
 package com.ifautofab
 
 import android.content.Context
+import android.util.Log
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -35,19 +36,28 @@ object MediaSessionHelper {
         mediaSession = MediaSessionCompat(context, "IFAutoFab").apply {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onSkipToNext() {
+                    Log.d("IFAutoFab", "MediaSession: onSkipToNext")
                     onSkipToNextListener?.invoke()
                 }
 
+                override fun onSkipToPrevious() {
+                    Log.d("IFAutoFab", "MediaSession: onSkipToPrevious")
+                    onSkipToNextListener?.invoke() // Both buttons trigger voice for now
+                }
+
                 override fun onPlay() {
+                    Log.d("IFAutoFab", "MediaSession: onPlay")
                     isActive = true
                     updateState(PlaybackStateCompat.STATE_PLAYING)
                 }
 
                 override fun onPause() {
+                    Log.d("IFAutoFab", "MediaSession: onPause")
                     updateState(PlaybackStateCompat.STATE_PAUSED)
                 }
                 
                 override fun onStop() {
+                    Log.d("IFAutoFab", "MediaSession: onStop")
                     updateState(PlaybackStateCompat.STATE_STOPPED)
                 }
             })
@@ -61,6 +71,7 @@ object MediaSessionHelper {
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(
                 PlaybackStateCompat.ACTION_SKIP_TO_NEXT or 
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
                 PlaybackStateCompat.ACTION_PLAY or 
                 PlaybackStateCompat.ACTION_PAUSE or 
                 PlaybackStateCompat.ACTION_STOP
