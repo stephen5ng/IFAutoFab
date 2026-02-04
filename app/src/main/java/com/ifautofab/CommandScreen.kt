@@ -9,6 +9,7 @@ class CommandScreen(carContext: CarContext) : Screen(carContext) {
     private val commonCommands = listOf(
         "Look", "Inventory", "Score", "Wait",
         "North", "South", "East", "West",
+        "Northeast", "Northwest", "Southeast", "Southwest",
         "Up", "Down", "In", "Out"
     )
 

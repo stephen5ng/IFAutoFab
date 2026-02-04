@@ -134,11 +134,15 @@ class MainActivity : AppCompatActivity() {
             GLKGameEngine.sendInput("n")
         }
 
-        // Quick shortcut handlers
+        // Quick shortcut handlers - 8 directions
         findViewById<Button>(R.id.northButton).setOnClickListener { GLKGameEngine.sendInput("n") }
         findViewById<Button>(R.id.southButton).setOnClickListener { GLKGameEngine.sendInput("s") }
         findViewById<Button>(R.id.eastButton).setOnClickListener { GLKGameEngine.sendInput("e") }
         findViewById<Button>(R.id.westButton).setOnClickListener { GLKGameEngine.sendInput("w") }
+        findViewById<Button>(R.id.northeastButton).setOnClickListener { GLKGameEngine.sendInput("ne") }
+        findViewById<Button>(R.id.northwestButton).setOnClickListener { GLKGameEngine.sendInput("nw") }
+        findViewById<Button>(R.id.southeastButton).setOnClickListener { GLKGameEngine.sendInput("se") }
+        findViewById<Button>(R.id.southwestButton).setOnClickListener { GLKGameEngine.sendInput("sw") }
         findViewById<Button>(R.id.upButton).setOnClickListener { GLKGameEngine.sendInput("u") }
         findViewById<Button>(R.id.downButton).setOnClickListener { GLKGameEngine.sendInput("d") }
         
