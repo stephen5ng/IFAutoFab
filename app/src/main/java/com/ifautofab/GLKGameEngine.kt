@@ -68,7 +68,7 @@ object GLKGameEngine {
             GLKController.flushEvents()
             TextOutputInterceptor.appendText("\n[Starting new game: ${gameFile.name}]\n")
 
-            ttsManager = TTSManager(application)
+            ttsManager = TTSManager.create(application)
 
             val m = GLKModel(application)
             val sharedPref = PreferenceManager.getDefaultSharedPreferences(application)
@@ -320,6 +320,17 @@ object GLKGameEngine {
         synchronized(ttsBuffer) {
             ttsBuffer.clear()
         }
+    }
+
+    /**
+     * Reload TTS engine when preferences change.
+     * Call this after returning from TTSSettingsActivity.
+     */
+    fun reloadTTS(application: Application) {
+        val oldTtsManager = ttsManager
+        ttsManager = TTSManager.create(application)
+        oldTtsManager?.shutdown()
+        Log.d("GLKGameEngine", "TTS engine reloaded")
     }
 
     fun isRunning(): Boolean {

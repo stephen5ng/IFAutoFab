@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="Text-to-Speech Engine">
+
+        <ListPreference
+            android:id="@+id/tts_engine"
+            android:key="tts_engine"
+            android:title="TTS Engine"
+            android:summary="Choose speech synthesis engine"
+            android:entries="@array/tts_engine_entries"
+            android:entryValues="@array/tts_engine_values"
+            android:defaultValue="sherpa" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Voice Settings">
+
+        <ListPreference
+            android:id="@+id/tts_voice"
+            android:key="tts_voice"
+            android:title="Voice"
+            android:summary="Select voice for text-to-speech"
+            android:entries="@array/kokoro_voice_entries"
+            android:entryValues="@array/kokoro_voice_values"
+            android:defaultValue="af_heart" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Model Management">
+
+        <Preference
+            android:key="tts_model_status"
+            android:title="Model Status"
+            android:summary="Checking..." />
+
+        <Preference
+            android:key="tts_download"
+            android:title="Download Models"
+            android:summary="Download Sherpa-ONNX models (125 MB)" />
+
+        <Preference
+            android:key="tts_delete"
+            android:title="Delete Models"
+            android:summary="Remove Sherpa-ONNX models to free space" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -47,6 +47,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Reload TTS when returning from settings (engine preference may have changed)
+    private val ttsSettingsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
+        GLKGameEngine.reloadTTS(application)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -319,6 +324,11 @@ class MainActivity : AppCompatActivity() {
             R.id.action_select_game -> {
                 val intent = android.content.Intent(this, GameSelectionActivity::class.java)
                 gameSelectionLauncher.launch(intent)
+                true
+            }
+            R.id.action_tts_settings -> {
+                val intent = android.content.Intent(this, TTSSettingsActivity::class.java)
+                ttsSettingsLauncher.launch(intent)
                 true
             }
             R.id.action_save -> {

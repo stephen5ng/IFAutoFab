@@ -64,4 +64,15 @@ dependencies {
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.media:media:1.7.0")
+
+    // Coroutines (for async operations)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Sherpa-ONNX TTS (local AAR from official GitHub releases)
+    // Contains OfflineTts, OfflineTtsConfig, and native .so libraries
+    // Source: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-1.12.23.aar
+    implementation(files("libs/sherpa-onnx-1.12.23.aar"))
+
+    // Apache Commons Compress for tar.bz2 extraction
+    implementation("org.apache.commons:commons-compress:1.26.0")
 }
