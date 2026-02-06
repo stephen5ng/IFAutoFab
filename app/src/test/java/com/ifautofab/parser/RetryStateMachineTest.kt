@@ -15,6 +15,7 @@ class RetryStateMachineTest {
     @Before
     fun setup() {
         stateMachine = RetryStateMachine()
+        stateMachine.setLogger(NoOpLogger)
     }
 
     @Test

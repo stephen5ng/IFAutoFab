@@ -12,6 +12,9 @@ class ParserErrorDetectionTest {
 
     @Before
     fun setup() {
+        // Use no-op logger for tests to avoid Android Log mocking issues
+        ParserWrapper.setLogger(NoOpLogger)
+        ParserLogger.setLogger(NoOpLogger)
         // Reset parser state before each test
         ParserWrapper.reset()
     }
@@ -24,8 +27,8 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull("Should detect error", error)
-        assertEquals("Should be UNKNOWN_VERB", ErrorType.UNKNOWN_VERB, error.type)
-        assertTrue("Should contain error text", error.matchedText.contains("don't understand"))
+        assertEquals("Should be UNKNOWN_VERB", ErrorType.UNKNOWN_VERB, error!!.type)
+        assertTrue("Should contain error text", error!!.matchedText.contains("don't understand"))
     }
 
     @Test
@@ -34,7 +37,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_VERB, error.type)
+        assertEquals(ErrorType.UNKNOWN_VERB, error!!.type)
     }
 
     @Test
@@ -43,7 +46,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_VERB, error.type)
+        assertEquals(ErrorType.UNKNOWN_VERB, error!!.type)
     }
 
     @Test
@@ -52,7 +55,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_VERB, error.type)
+        assertEquals(ErrorType.UNKNOWN_VERB, error!!.type)
     }
 
     // ==================== Unknown Noun Tests ====================
@@ -63,7 +66,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_NOUN, error.type)
+        assertEquals(ErrorType.UNKNOWN_NOUN, error!!.type)
     }
 
     @Test
@@ -72,7 +75,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_NOUN, error.type)
+        assertEquals(ErrorType.UNKNOWN_NOUN, error!!.type)
     }
 
     @Test
@@ -81,7 +84,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_NOUN, error.type)
+        assertEquals(ErrorType.UNKNOWN_NOUN, error!!.type)
     }
 
     @Test
@@ -90,7 +93,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_NOUN, error.type)
+        assertEquals(ErrorType.UNKNOWN_NOUN, error!!.type)
     }
 
     // ==================== Ambiguity Tests ====================
@@ -101,7 +104,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.AMBIGUOUS, error.type)
+        assertEquals(ErrorType.AMBIGUOUS, error!!.type)
     }
 
     @Test
@@ -110,7 +113,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.AMBIGUOUS, error.type)
+        assertEquals(ErrorType.AMBIGUOUS, error!!.type)
     }
 
     // ==================== Syntax Error Tests ====================
@@ -121,7 +124,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.SYNTAX, error.type)
+        assertEquals(ErrorType.SYNTAX, error!!.type)
     }
 
     @Test
@@ -130,7 +133,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.SYNTAX, error.type)
+        assertEquals(ErrorType.SYNTAX, error!!.type)
     }
 
     // ==================== Darkness Tests ====================
@@ -141,7 +144,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.DARKNESS, error.type)
+        assertEquals(ErrorType.DARKNESS, error!!.type)
     }
 
     @Test
@@ -150,7 +153,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.DARKNESS, error.type)
+        assertEquals(ErrorType.DARKNESS, error!!.type)
     }
 
     // ==================== Game Logic Response Tests ====================
@@ -161,7 +164,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.CANT_DO_THAT, error.type)
+        assertEquals(ErrorType.CANT_DO_THAT, error!!.type)
     }
 
     @Test
@@ -170,7 +173,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.NOT_HERE, error.type)
+        assertEquals(ErrorType.NOT_HERE, error!!.type)
     }
 
     // ==================== Valid Response Tests ====================
@@ -236,7 +239,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_VERB, error.type)
+        assertEquals(ErrorType.UNKNOWN_VERB, error!!.type)
     }
 
     @Test
@@ -262,7 +265,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertTrue("Should attempt rewrite for UNKNOWN_VERB",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -272,7 +275,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertTrue("Should attempt rewrite for UNKNOWN_NOUN",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -282,7 +285,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertTrue("Should attempt rewrite for AMBIGUOUS",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -292,7 +295,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertTrue("Should attempt rewrite for SYNTAX",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -302,7 +305,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertFalse("Should NOT rewrite CANT_DO_THAT",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -312,7 +315,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertFalse("Should NOT rewrite DARKNESS",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -322,7 +325,7 @@ class ParserErrorDetectionTest {
 
         assertNotNull(error)
         assertFalse("Should NOT rewrite NOT_HERE",
-            ParserWrapper.shouldAttemptRewrite(error))
+            ParserWrapper.shouldAttemptRewrite(error!!))
     }
 
     @Test
@@ -332,7 +335,7 @@ class ParserErrorDetectionTest {
 
         if (error != null) {
             assertFalse("Should NOT rewrite NO_SUCH_THING",
-                ParserWrapper.shouldAttemptRewrite(error))
+                ParserWrapper.shouldAttemptRewrite(error!!))
         }
     }
 
@@ -360,7 +363,7 @@ class ParserErrorDetectionTest {
         val error = ParserWrapper.detectParserFailure(output)
 
         assertNotNull(error)
-        assertEquals(ErrorType.UNKNOWN_VERB, error.type)
+        assertEquals(ErrorType.UNKNOWN_VERB, error!!.type)
     }
 
     @Test
@@ -375,7 +378,7 @@ class ParserErrorDetectionTest {
         for (output in outputs) {
             val error = ParserWrapper.detectParserFailure(output)
             assertNotNull("Should detect error: $output", error)
-            assertEquals(ErrorType.UNKNOWN_VERB, error.type)
+            assertEquals(ErrorType.UNKNOWN_VERB, error!!.type)
         }
     }
 

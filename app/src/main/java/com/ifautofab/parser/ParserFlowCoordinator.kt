@@ -5,6 +5,16 @@ import com.ifautofab.TextOutputInterceptor
 import com.luxlunae.glk.model.GLKModel
 
 /**
+ * Android logger implementation for ParserFlowCoordinator.
+ */
+private class ParserFlowCoordinatorLogger : Logger {
+    override fun d(tag: String, msg: String): Int = Log.d(tag, msg)
+    override fun i(tag: String, msg: String): Int = Log.i(tag, msg)
+    override fun w(tag: String, msg: String): Int = Log.w(tag, msg)
+    override fun e(tag: String, msg: String, e: Throwable?): Int = Log.e(tag, msg, e)
+}
+
+/**
  * Coordinates the complete parser flow:
  * 1. Intercept input
  * 2. Track command in state machine
@@ -17,6 +27,14 @@ import com.luxlunae.glk.model.GLKModel
 object ParserFlowCoordinator {
 
     private const val TAG = "ParserFlowCoordinator"
+    private var logger: Logger = ParserFlowCoordinatorLogger()
+
+    /**
+     * Sets the logger implementation (for testing).
+     */
+    fun setLogger(l: Logger) {
+        logger = l
+    }
 
     /**
      * Callback interface for retry injection.
@@ -50,7 +68,7 @@ object ParserFlowCoordinator {
      */
     fun initialize() {
         if (isInitialized) {
-            Log.w(TAG, "Already initialized")
+            logger.w(TAG, "Already initialized")
             return
         }
 
@@ -63,7 +81,7 @@ object ParserFlowCoordinator {
         // Also register as a listener for command tracking
         // Note: We need to be notified of commands being sent
         isInitialized = true
-        Log.i(TAG, "Initialized")
+        logger.i(TAG, "Initialized")
     }
 
     /**
@@ -91,7 +109,7 @@ object ParserFlowCoordinator {
      */
     fun processInput(input: String, isRetry: Boolean = false): String {
         if (!isInitialized) {
-            Log.w(TAG, "Not initialized, passing through: '$input'")
+            logger.w(TAG, "Not initialized, passing through: '$input'")
             return input
         }
 
@@ -99,7 +117,7 @@ object ParserFlowCoordinator {
 
         // If this is a retry command, just pass it through and track for output
         if (isRetry || isProcessingRetry) {
-            Log.i(TAG, "Processing retry command: '$command'")
+            logger.i(TAG, "Processing retry command: '$command'")
             // Notify output listener to watch for retry result
             outputListener?.onCommandSent(command)
             return command
@@ -119,7 +137,7 @@ object ParserFlowCoordinator {
         val processedInput = ParserWrapper.interceptInput(command, context)
 
         if (processedInput != command) {
-            Log.i(TAG, "Input processed: '$command' → '$processedInput'")
+            logger.i(TAG, "Input processed: '$command' → '$processedInput'")
         }
 
         return processedInput
@@ -130,7 +148,7 @@ object ParserFlowCoordinator {
      * This is called automatically via the output listener.
      */
     private fun handleParserError(command: String, error: ErrorInfo) {
-        Log.w(TAG, "Parser error detected: ${error.type} for command: '$command'")
+        logger.w(TAG, "Parser error detected: ${error.type} for command: '$command'")
 
         // Log the error
         ParserLogger.logErrorDetected(command, error)
@@ -139,20 +157,20 @@ object ParserFlowCoordinator {
         val shouldRetry = stateMachine.onParserError(error)
 
         if (!shouldRetry) {
-            Log.d(TAG, "No retry available (state: ${stateMachine.getState()})")
+            logger.d(TAG, "No retry available (state: ${stateMachine.getState()})")
             return
         }
 
         // Check if this error type is rewritable
         if (!ParserWrapper.shouldAttemptRewrite(error)) {
-            Log.i(TAG, "Error type ${error.type} not rewritable - this is a game response")
+            logger.i(TAG, "Error type ${error.type} not rewritable - this is a game response")
             ParserLogger.logFallback(command, error, "Non-rewritable error type (game logic)")
             return
         }
 
         // Check if retry is available
         if (!stateMachine.canRetry()) {
-            Log.d(TAG, "Retry not available in current state")
+            logger.d(TAG, "Retry not available in current state")
             return
         }
 
@@ -166,7 +184,7 @@ object ParserFlowCoordinator {
             ParserWrapper.markRewriteAttempted(rewritten)
             ParserLogger.logRewriteAttempted(command, rewritten, error)
 
-            Log.i(TAG, "Rewrite ready: '$command' → '$rewritten'")
+            logger.i(TAG, "Rewrite ready: '$command' → '$rewritten'")
 
             // Invoke the retry listener to send the command
             val listener = retryListener
@@ -178,10 +196,10 @@ object ParserFlowCoordinator {
                     isProcessingRetry = false
                 }
             } else {
-                Log.w(TAG, "No retry listener registered - retry will not be sent")
+                logger.w(TAG, "No retry listener registered - retry will not be sent")
             }
         } else {
-            Log.i(TAG, "No rewrite available, falling back to original error")
+            logger.i(TAG, "No rewrite available, falling back to original error")
             ParserLogger.logFallback(command, error, "No rewrite available")
             stateMachine.reset()
         }
@@ -220,7 +238,7 @@ object ParserFlowCoordinator {
         stateMachine.reset()
         outputListener?.reset()
         isProcessingRetry = false
-        Log.d(TAG, "Reset")
+        logger.d(TAG, "Reset")
     }
 
     /**
@@ -234,7 +252,7 @@ object ParserFlowCoordinator {
         retryListener = null
         isProcessingRetry = false
         isInitialized = false
-        Log.i(TAG, "Shutdown")
+        logger.i(TAG, "Shutdown")
     }
 
     /**

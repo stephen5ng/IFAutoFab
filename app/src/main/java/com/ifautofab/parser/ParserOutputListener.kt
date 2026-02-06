@@ -5,6 +5,16 @@ import com.ifautofab.TextOutputInterceptor
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
+ * Android logger implementation for ParserOutputListener.
+ */
+private class ParserOutputListenerLogger : Logger {
+    override fun d(tag: String, msg: String): Int = Log.d(tag, msg)
+    override fun i(tag: String, msg: String): Int = Log.i(tag, msg)
+    override fun w(tag: String, msg: String): Int = Log.w(tag, msg)
+    override fun e(tag: String, msg: String, e: Throwable?): Int = Log.e(tag, msg, e)
+}
+
+/**
  * Listens to game output to detect parser failures and trigger rewrites.
  * Integrates with TextOutputInterceptor to receive game output.
  */
@@ -13,6 +23,14 @@ class ParserOutputListener(
 ) : TextOutputInterceptor.OutputListener {
 
     private val TAG = "ParserOutputListener"
+    private var logger: Logger = ParserOutputListenerLogger()
+
+    /**
+     * Sets the logger implementation (for testing).
+     */
+    fun setLogger(l: Logger) {
+        logger = l
+    }
 
     private var pendingCommand: String? = null
     private val outputBuffer = StringBuilder()
@@ -25,7 +43,7 @@ class ParserOutputListener(
         pendingCommand = command
         outputBuffer.clear()
         isProcessing = true
-        Log.d(TAG, "Command pending: '$command'")
+        logger.d(TAG, "Command pending: '$command'")
     }
 
     override fun onTextAppended(text: String) {
@@ -91,22 +109,22 @@ class ParserOutputListener(
     private fun processCompleteResponse(output: String) {
         val command = pendingCommand
         if (command == null) {
-            Log.d(TAG, "No pending command, skipping error detection")
+            logger.d(TAG, "No pending command, skipping error detection")
             return
         }
 
         val error = ParserWrapper.detectParserFailure(output)
 
         if (error != null) {
-            Log.d(TAG, "Parser error detected: ${error.type}")
-            Log.d(TAG, "Original: '$command'")
-            Log.d(TAG, "Output: ${output.take(200)}")
+            logger.d(TAG, "Parser error detected: ${error.type}")
+            logger.d(TAG, "Original: '$command'")
+            logger.d(TAG, "Output: ${output.take(200)}")
 
             // Notify callback for error handling
             onParserError(command, error)
         } else {
             // No error - command succeeded
-            Log.d(TAG, "No error detected for command: '$command'")
+            logger.d(TAG, "No error detected for command: '$command'")
         }
 
         // Reset for next command

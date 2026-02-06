@@ -3,6 +3,16 @@ package com.ifautofab.parser
 import android.util.Log
 
 /**
+ * Android logger implementation for PlaceholderRewriter.
+ */
+private class PlaceholderRewriterLogger : Logger {
+    override fun d(tag: String, msg: String): Int = Log.d(tag, msg)
+    override fun i(tag: String, msg: String): Int = Log.i(tag, msg)
+    override fun w(tag: String, msg: String): Int = Log.w(tag, msg)
+    override fun e(tag: String, msg: String, e: Throwable?): Int = Log.e(tag, msg, e)
+}
+
+/**
  * Placeholder rewrite function for Phase 1.
  * In Phase 1, this simulates a rewrite without calling an LLM.
  * Phase 2 will replace this with actual LLM calls.
@@ -10,6 +20,14 @@ import android.util.Log
 object PlaceholderRewriter {
 
     private const val TAG = "PlaceholderRewriter"
+    private var logger: Logger = PlaceholderRewriterLogger()
+
+    /**
+     * Sets the logger implementation (for testing).
+     */
+    fun setLogger(l: Logger) {
+        logger = l
+    }
 
     /**
      * Attempts to rewrite a failed command using simple rule-based transformations.
@@ -29,7 +47,7 @@ object PlaceholderRewriter {
     ): String? {
         if (command.isBlank()) return null
 
-        Log.i(TAG, "Analyzing: '$command' with error: ${error.type}")
+        logger.i(TAG, "Analyzing: '$command' with error: ${error.type}")
 
         // Phase 1: Simple rule-based transformations
         // This validates the pipeline without needing an LLM
@@ -37,7 +55,7 @@ object PlaceholderRewriter {
         // Rule 1: Multiple spaces to single space
         if (command.contains(Regex("""\s{2,}"""))) {
             val normalized = command.replace(Regex("""\s+"""), " ").trim()
-            Log.d(TAG, "Rule 1: Normalized whitespace: '$normalized'")
+            logger.d(TAG, "Rule 1: Normalized whitespace: '$normalized'")
             return normalized
         }
 
@@ -46,7 +64,7 @@ object PlaceholderRewriter {
         if (command.firstOrNull()?.let { it in leadingPunctuation } == true) {
             val cleaned = command.trimStart(*leadingPunctuation.toCharArray()).trim()
             if (cleaned.isNotBlank()) {
-                Log.d(TAG, "Rule 2: Trimmed leading punctuation: '$cleaned'")
+                logger.d(TAG, "Rule 2: Trimmed leading punctuation: '$cleaned'")
                 return cleaned
             }
         }
@@ -56,7 +74,7 @@ object PlaceholderRewriter {
         if (command.lastOrNull()?.let { it in trailingPunctuation } == true) {
             val cleaned = command.trimEnd(*trailingPunctuation.toCharArray()).trim()
             if (cleaned.isNotBlank()) {
-                Log.d(TAG, "Rule 3: Trimmed trailing punctuation: '$cleaned'")
+                logger.d(TAG, "Rule 3: Trimmed trailing punctuation: '$cleaned'")
                 return cleaned
             }
         }
@@ -78,7 +96,7 @@ object PlaceholderRewriter {
         val lowerCommand = command.lowercase().trim()
         for ((synonym, standard) in directionSynonyms) {
             if (lowerCommand == synonym) {
-                Log.d(TAG, "Rule 4: Direction synonym '$synonym' → '$standard'")
+                logger.d(TAG, "Rule 4: Direction synonym '$synonym' → '$standard'")
                 return standard
             }
         }
@@ -97,7 +115,7 @@ object PlaceholderRewriter {
         for ((pattern, replacement) in verbSynonyms) {
             if (pattern.containsMatchIn(lowerCommand)) {
                 val rewritten = pattern.replace(lowerCommand, replacement)
-                Log.d(TAG, "Rule 5: Verb synonym: '$rewritten'")
+                logger.d(TAG, "Rule 5: Verb synonym: '$rewritten'")
                 return rewritten
             }
         }
@@ -113,13 +131,13 @@ object PlaceholderRewriter {
                 "ne", "nw", "se", "sw", "in", "out")
             if (direction.lowercase() in validDirections) {
                 val rewritten = direction.lowercase()
-                Log.d(TAG, "Rule 6: Simplified 'go $direction' → '$rewritten'")
+                logger.d(TAG, "Rule 6: Simplified 'go $direction' → '$rewritten'")
                 return rewritten
             }
         }
 
         // No rule-based rewrite available
-        Log.d(TAG, "No rule-based rewrite available for: '$command'")
+        logger.d(TAG, "No rule-based rewrite available for: '$command'")
         return null
     }
 

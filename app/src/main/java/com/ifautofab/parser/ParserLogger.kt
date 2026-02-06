@@ -6,6 +6,16 @@ import org.json.JSONObject
 import java.util.UUID
 
 /**
+ * Android logger implementation for ParserLogger.
+ */
+private class ParserLoggerAndroid : Logger {
+    override fun d(tag: String, msg: String): Int = Log.d(tag, msg)
+    override fun i(tag: String, msg: String): Int = Log.i(tag, msg)
+    override fun w(tag: String, msg: String): Int = Log.w(tag, msg)
+    override fun e(tag: String, msg: String, e: Throwable?): Int = Log.e(tag, msg, e)
+}
+
+/**
  * Sealed class for all parser events.
  */
 sealed class ParserEvent {
@@ -57,10 +67,18 @@ sealed class ParserEvent {
 object ParserLogger {
 
     private const val TAG = "ParserLog"
+    private var logger: Logger = ParserLoggerAndroid()
 
     private var sessionId: String = UUID.randomUUID().toString()
     private val eventLog = mutableListOf<ParserEvent>()
     private val eventLock = Any()
+
+    /**
+     * Sets the logger implementation (for testing).
+     */
+    fun setLogger(l: Logger) {
+        logger = l
+    }
 
     /**
      * Logs that a command was sent to the interpreter.
@@ -68,7 +86,7 @@ object ParserLogger {
     fun logCommandSent(command: String) {
         val event = ParserEvent.CommandSent(command, System.currentTimeMillis())
         addEvent(event)
-        Log.d(TAG, "[SENT] $command")
+        logger.d(TAG, "[SENT] $command")
     }
 
     /**
@@ -82,7 +100,7 @@ object ParserLogger {
             System.currentTimeMillis()
         )
         addEvent(event)
-        Log.d(TAG, "[ERROR ${error.type}] '$command'")
+        logger.d(TAG, "[ERROR ${error.type}] '$command'")
     }
 
     /**
@@ -96,7 +114,7 @@ object ParserLogger {
             System.currentTimeMillis()
         )
         addEvent(event)
-        Log.i(TAG, "[REWRITE ${error.type}] '$original' -> '$rewritten'")
+        logger.i(TAG, "[REWRITE ${error.type}] '$original' -> '$rewritten'")
     }
 
     /**
@@ -111,7 +129,7 @@ object ParserLogger {
         )
         addEvent(event)
         val resultStr = if (success) "SUCCESS" else "FAILED"
-        Log.i(TAG, "[RETRY $resultStr] '$rewritten'")
+        logger.i(TAG, "[RETRY $resultStr] '$rewritten'")
     }
 
     /**
@@ -125,7 +143,7 @@ object ParserLogger {
             System.currentTimeMillis()
         )
         addEvent(event)
-        Log.w(TAG, "[FALLBACK ${error.type}] $reason - '$original'")
+        logger.w(TAG, "[FALLBACK ${error.type}] $reason - '$original'")
     }
 
     /**
@@ -138,7 +156,7 @@ object ParserLogger {
         }
         val event = ParserEvent.SessionStarted(gameName, System.currentTimeMillis())
         addEvent(event)
-        Log.i(TAG, "New session: $sessionId (game: $gameName)")
+        logger.i(TAG, "New session: $sessionId (game: $gameName)")
     }
 
     /**
@@ -266,7 +284,7 @@ object ParserLogger {
         synchronized(eventLock) {
             eventLog.clear()
         }
-        Log.d(TAG, "Event log cleared")
+        logger.d(TAG, "Event log cleared")
     }
 
     /**

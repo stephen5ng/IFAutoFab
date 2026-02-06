@@ -3,6 +3,16 @@ package com.ifautofab.parser
 import android.util.Log
 
 /**
+ * Android logger implementation for RetryStateMachine.
+ */
+private class RetryStateMachineLogger : Logger {
+    override fun d(tag: String, msg: String): Int = Log.d(tag, msg)
+    override fun i(tag: String, msg: String): Int = Log.i(tag, msg)
+    override fun w(tag: String, msg: String): Int = Log.w(tag, msg)
+    override fun e(tag: String, msg: String, e: Throwable?): Int = Log.e(tag, msg, e)
+}
+
+/**
  * State machine for tracking command retries.
  * Enforces single-retry constraint to prevent infinite loops.
  */
@@ -30,6 +40,7 @@ enum class RetryState {
 class RetryStateMachine {
 
     private val TAG = "RetryStateMachine"
+    private var logger: Logger = RetryStateMachineLogger()
 
     @Volatile
     private var state: RetryState = RetryState.IDLE
@@ -44,6 +55,13 @@ class RetryStateMachine {
     private var lastError: ErrorInfo? = null
 
     /**
+     * Sets the logger implementation (for testing).
+     */
+    fun setLogger(l: Logger) {
+        logger = l
+    }
+
+    /**
      * Called when a command is sent to the interpreter.
      * Transitions from IDLE/FAILED to COMMAND_SENT.
      */
@@ -55,16 +73,16 @@ class RetryStateMachine {
                     originalCommand = command
                     rewrittenCommand = ""
                     lastError = null
-                    Log.d(TAG, "Command sent: '$command', state → COMMAND_SENT")
+                    logger.d(TAG, "Command sent: '$command', state → COMMAND_SENT")
                 }
 
                 RetryState.RETRY_SENT -> {
                     // This is the retry result coming back
-                    Log.d(TAG, "Retry response received for: '$command'")
+                    logger.d(TAG, "Retry response received for: '$command'")
                 }
 
                 else -> {
-                    Log.w(TAG, "Unexpected command in state: $state")
+                    logger.w(TAG, "Unexpected command in state: $state")
                 }
             }
         }
@@ -83,18 +101,18 @@ class RetryStateMachine {
                 RetryState.COMMAND_SENT -> {
                     state = RetryState.ERROR_DETECTED
                     lastError = error
-                    Log.d(TAG, "Parser error detected: ${error.type}, state → ERROR_DETECTED")
+                    logger.d(TAG, "Parser error detected: ${error.type}, state → ERROR_DETECTED")
                     true  // Retry is available
                 }
 
                 RetryState.RETRY_SENT -> {
                     state = RetryState.FAILED
-                    Log.w(TAG, "Retry also failed: ${error.type}, state → FAILED")
+                    logger.w(TAG, "Retry also failed: ${error.type}, state → FAILED")
                     true  // Signal that retry failed
                 }
 
                 else -> {
-                    Log.d(TAG, "Parser error in state $state - ignoring")
+                    logger.d(TAG, "Parser error in state $state - ignoring")
                     false
                 }
             }
@@ -118,7 +136,7 @@ class RetryStateMachine {
         synchronized(this) {
             state = RetryState.RETRY_SENT
             this.rewrittenCommand = rewrittenCommand
-            Log.i(TAG, "Retry sent: '$rewrittenCommand', state → RETRY_SENT")
+            logger.i(TAG, "Retry sent: '$rewrittenCommand', state → RETRY_SENT")
         }
     }
 
@@ -129,7 +147,7 @@ class RetryStateMachine {
     fun onSuccess() {
         synchronized(this) {
             if (state != RetryState.IDLE) {
-                Log.d(TAG, "Command succeeded, state → IDLE")
+                logger.d(TAG, "Command succeeded, state → IDLE")
                 state = RetryState.IDLE
                 originalCommand = ""
                 rewrittenCommand = ""
@@ -184,7 +202,7 @@ class RetryStateMachine {
             originalCommand = ""
             rewrittenCommand = ""
             lastError = null
-            Log.d(TAG, "State machine reset")
+            logger.d(TAG, "State machine reset")
         }
     }
 

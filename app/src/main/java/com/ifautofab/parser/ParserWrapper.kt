@@ -4,6 +4,36 @@ import android.util.Log
 import java.util.UUID
 
 /**
+ * Simple logger interface to allow testing without Android dependencies.
+ */
+interface Logger {
+    fun d(tag: String, msg: String): Int
+    fun i(tag: String, msg: String): Int = d(tag, msg)
+    fun w(tag: String, msg: String): Int = d(tag, msg)
+    fun e(tag: String, msg: String, e: Throwable? = null): Int
+}
+
+/**
+ * Android logger implementation.
+ */
+private class AndroidLogger : Logger {
+    override fun d(tag: String, msg: String): Int = Log.d(tag, msg)
+    override fun i(tag: String, msg: String): Int = Log.i(tag, msg)
+    override fun w(tag: String, msg: String): Int = Log.w(tag, msg)
+    override fun e(tag: String, msg: String, e: Throwable?): Int = Log.e(tag, msg, e)
+}
+
+/**
+ * No-op logger for testing.
+ */
+object NoOpLogger : Logger {
+    override fun d(tag: String, msg: String): Int = 0
+    override fun i(tag: String, msg: String): Int = 0
+    override fun w(tag: String, msg: String): Int = 0
+    override fun e(tag: String, msg: String, e: Throwable?): Int = 0
+}
+
+/**
  * Wrapper for Z-machine parser that enables command rewriting on failure.
  *
  * Constraints:
@@ -15,6 +45,7 @@ import java.util.UUID
 object ParserWrapper {
 
     private const val TAG = "ParserWrapper"
+    private var logger: Logger = AndroidLogger()
 
     // Parser state tracking
     private var lastCommand: String = ""
@@ -29,6 +60,13 @@ object ParserWrapper {
 
     // Debug mode for verbose logging
     var isDebugMode: Boolean = false
+
+    /**
+     * Sets the logger implementation (for testing).
+     */
+    fun setLogger(l: Logger) {
+        logger = l
+    }
 
     /**
      * Intercepts input before sending to native interpreter.
@@ -47,12 +85,12 @@ object ParserWrapper {
         }
 
         if (isDebugMode) {
-            Log.d(TAG, "Intercepting input: '$command'")
+            logger.d(TAG, "Intercepting input: '$command'")
         }
 
         // If this is a retry attempt (already rewritten once), fail fast
         if (!retryAvailable) {
-            Log.w(TAG, "Retry exhausted, returning original: $command")
+            logger.w(TAG, "Retry exhausted, returning original: $command")
             return command
         }
 
@@ -71,7 +109,7 @@ object ParserWrapper {
             if (matcher != null) {
                 val error = ErrorInfo(type, matcher.value, output)
                 if (isDebugMode) {
-                    Log.d(TAG, "Detected error type: $type, matched: '${matcher.value}'")
+                    logger.d(TAG, "Detected error type: $type, matched: '${matcher.value}'")
                 }
                 return error
             }
@@ -99,7 +137,7 @@ object ParserWrapper {
         }
 
         if (isDebugMode) {
-            Log.d(TAG, "Should attempt rewrite for ${error.type}: $shouldRewrite")
+            logger.d(TAG, "Should attempt rewrite for ${error.type}: $shouldRewrite")
         }
 
         return shouldRewrite
@@ -111,7 +149,7 @@ object ParserWrapper {
     fun markRewriteAttempted(rewrite: String) {
         lastAttemptedRewrite = rewrite
         retryAvailable = false
-        Log.i(TAG, "Rewrite attempted: '$lastCommand' → '$rewrite'")
+        logger.i(TAG, "Rewrite attempted: '$lastCommand' → '$rewrite'")
         ParserLogger.logRewriteAttempted(lastCommand, rewrite, ErrorInfo(ErrorType.UNKNOWN_VERB, "", ""))
     }
 
@@ -122,7 +160,7 @@ object ParserWrapper {
         lastCommand = ""
         lastAttemptedRewrite = null
         retryAvailable = true
-        Log.d(TAG, "State reset")
+        logger.d(TAG, "State reset")
     }
 
     /**
@@ -208,9 +246,12 @@ private val ERROR_PATTERNS: List<Pair<String, ErrorType>> = listOf(
 
     // Darkness/environmental
     """It['']s (too dark|pitch dark|dark) to see""" to ErrorType.DARKNESS,
+    """It is (too dark|pitch dark|dark) to see""" to ErrorType.DARKNESS,
 
     // Verb errors
-    """I don['']t understand (that sentence|""" to ErrorType.UNKNOWN_VERB,
+    """I don['']t understand that sentence""" to ErrorType.UNKNOWN_VERB,
+    """I don['']t understand ["'].*?["'] sentence""" to ErrorType.UNKNOWN_VERB,
+    """I don['']t understand the word""" to ErrorType.UNKNOWN_VERB,
     """I don['']t know the word ["']([^"']+)["']""" to ErrorType.UNKNOWN_VERB,
     """You used the word ["']([^"']+)["'] in a way that I don['']t understand""" to ErrorType.UNKNOWN_VERB,
     """I didn['']t understand that sentence""" to ErrorType.UNKNOWN_VERB,
