@@ -109,4 +109,5 @@ dependencies {
 
     // Testing dependencies
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20230227")  // Standard JSON lib for unit tests
 }

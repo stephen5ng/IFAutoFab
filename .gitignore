@@ -35,6 +35,8 @@ app/src/main/assets/games/
 # Sensitive Keys
 play-store-key.json
 *.jks
+.bashrc
+.env
 
 # Project Specific
 .claude/
