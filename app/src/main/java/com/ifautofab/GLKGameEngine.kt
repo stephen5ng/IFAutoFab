@@ -13,6 +13,9 @@ import android.os.Handler
 import android.os.Looper
 import java.io.File
 import java.nio.ByteBuffer
+import com.ifautofab.parser.ParserFlowCoordinator
+import com.ifautofab.parser.ParserLogger
+import com.ifautofab.parser.ParserWrapper
 
 /**
  * Singleton engine to manage the GLK interpreter lifecycle.
@@ -27,7 +30,11 @@ object GLKGameEngine {
     var isCarConnected: Boolean = false
 
     var onGameFinishedListener: (() -> Unit)? = null
-    
+
+    // Parser assistance configuration
+    var parserEnabled: Boolean = true
+    var parserDebug: Boolean = false
+
     // Handler for main thread operations (like UI callbacks)
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -66,6 +73,7 @@ object GLKGameEngine {
 
             // Start new game session
             GLKController.flushEvents()
+
             TextOutputInterceptor.appendText("\n[Starting new game: ${gameFile.name}]\n")
 
             ttsManager = TTSManager.create(application)
@@ -106,7 +114,25 @@ object GLKGameEngine {
             
             model = m
             lastTextLength = 0
-            
+
+            // Initialize parser assistance after model is ready
+            if (parserEnabled) {
+                ParserFlowCoordinator.initialize()
+                ParserFlowCoordinator.setModel(m)
+                ParserFlowCoordinator.setRetryListener(object : ParserFlowCoordinator.OnRetryListener {
+                    override fun onRetryReady(originalCommand: String, retryCommand: String) {
+                        Log.i("GLKGameEngine", "Parser retry: '$originalCommand' → '$retryCommand'")
+                        // Post to main thread with small delay to let current output processing complete
+                        mainHandler.postDelayed({
+                            sendInputDirect(retryCommand)
+                        }, 100)
+                    }
+                })
+                ParserWrapper.isEnabled = true
+                ParserWrapper.isDebugMode = parserDebug
+                ParserLogger.logSessionStarted(gameFile.name)
+            }
+
             m.setViewUpdateListener {
                 val window = m.mStreamMgr.getFirstTextWindow()
                 if (window is GLKTextBufferM) {
@@ -167,14 +193,27 @@ object GLKGameEngine {
     }
 
     fun sendInput(input: String) {
+        // Skip parser processing for internal commands
+        val isInternalCommand = input.equals("restore", ignoreCase = true) ||
+                               input.equals("save", ignoreCase = true) ||
+                               input.equals("y", ignoreCase = true) ||
+                               input.equals("n", ignoreCase = true)
+
         // Any user input (excluding internal auto-restore) clears the startup filtering phase
         if (!input.equals("restore", ignoreCase = true) && !input.equals("save", ignoreCase = true)) {
             isGameStarting = false
         }
+
+        // Process through parser wrapper if enabled
+        val processedInput = if (parserEnabled && !isInternalCommand) {
+            ParserFlowCoordinator.processInput(input)
+        } else {
+            input
+        }
         
         // Intercept "restart" command - the game's Y/N confirmation is broken,
         // so we restart at the app level instead
-        if (input.trim().equals("restart", ignoreCase = true)) {
+        if (processedInput.trim().equals("restart", ignoreCase = true)) {
             Log.d("GLKGameEngine", "Intercepting restart command - restarting game at app level")
             val app = lastApplication
             val path = lastGamePath
@@ -206,16 +245,16 @@ object GLKGameEngine {
 
         val m = model ?: return
         val window = m.mStreamMgr.getFirstTextWindow()
-        Log.d("GLKGameEngine", "sendInput: '$input', window=$window")
+        Log.d("GLKGameEngine", "sendInput: '$processedInput', window=$window")
         if (window is GLKTextBufferM) {
             val charRequested = window.charRequested()
             val lineRequested = window.mInputBB != null
             Log.d("GLKGameEngine", "sendInput: charRequested=$charRequested, lineRequested=$lineRequested")
 
             // Check for character input mode first (e.g., restart confirmation)
-            if (charRequested && input.isNotEmpty()) {
-                val ch = input[0].code
-                Log.d("GLKGameEngine", "sendInput: sending charEvent ch=$ch ('${input[0]}')")
+            if (charRequested && processedInput.isNotEmpty()) {
+                val ch = processedInput[0].code
+                Log.d("GLKGameEngine", "sendInput: sending charEvent ch=$ch ('${processedInput[0]}')")
                 val ev = GLKEvent()
                 ev.charEvent(window.streamId, ch)
                 window.cancelCharEvent()
@@ -229,13 +268,13 @@ object GLKGameEngine {
                 // Set mInput (the StringBuilder) - this is what gets written to mInputBB
                 // when the event is processed
                 window.mInput.setLength(0)
-                window.mInput.append(input)
+                window.mInput.append(processedInput)
 
                 val unicode = window.mIs32Bit
 
                 // Reset buffer position before writing
                 inputBB.limit(inputBB.capacity()).rewind()
-                val len = m.mCharsetMgr?.putGLKString(input, inputBB, unicode, false) ?: 0
+                val len = m.mCharsetMgr?.putGLKString(processedInput, inputBB, unicode, false) ?: 0
                 Log.d("GLKGameEngine", "sendInput: sending lineEvent len=$len, buffer pos=${inputBB.position()}")
 
                 val ev = GLKEvent()
@@ -248,7 +287,49 @@ object GLKGameEngine {
             }
         }
     }
-    
+
+    /**
+     * Sends input directly to the interpreter, bypassing parser assistance.
+     * Used for retry commands that have already been processed by the parser.
+     */
+    private fun sendInputDirect(input: String) {
+        Log.d("GLKGameEngine", "sendInputDirect: '$input'")
+
+        val m = model ?: return
+        val window = m.mStreamMgr.getFirstTextWindow()
+        if (window is GLKTextBufferM) {
+            val charRequested = window.charRequested()
+            val lineRequested = window.mInputBB != null
+
+            // Check for character input mode first
+            if (charRequested && input.isNotEmpty()) {
+                val ch = input[0].code
+                val ev = GLKEvent()
+                ev.charEvent(window.streamId, ch)
+                window.cancelCharEvent()
+                GLKController.postEvent(ev)
+                return
+            }
+
+            // Handle line input mode
+            val inputBB = window.mInputBB
+            if (inputBB != null) {
+                window.mInput.setLength(0)
+                window.mInput.append(input)
+
+                val unicode = window.mIs32Bit
+                inputBB.limit(inputBB.capacity()).rewind()
+                val len = m.mCharsetMgr?.putGLKString(input, inputBB, unicode, false) ?: 0
+
+                val ev = GLKEvent()
+                ev.lineEvent(window.streamId, len, 0)
+                GLKController.postEvent(ev)
+            } else {
+                Log.w("GLKGameEngine", "sendInputDirect: No input buffer available, cannot send retry")
+            }
+        }
+    }
+
     fun stopGame(clearOutput: Boolean = true) {
         val m = model
         val thread = workerThread
@@ -304,6 +385,11 @@ object GLKGameEngine {
         ttsManager?.stop()
         ttsManager?.shutdown()
         ttsManager = null
+
+        // Shutdown parser assistance
+        if (parserEnabled) {
+            ParserFlowCoordinator.shutdown()
+        }
         
         ttsHandler.removeCallbacks(speakRunnable)
         synchronized(ttsBuffer) {
