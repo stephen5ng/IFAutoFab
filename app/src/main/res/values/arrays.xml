@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="tts_engine_entries">
+        <item>Sherpa-ONNX (High Quality)</item>
+        <item>System TTS (Default)</item>
+    </string-array>
+
+    <string-array name="tts_engine_values">
+        <item>sherpa</item>
+        <item>system</item>
+    </string-array>
+
+    <string-array name="kokoro_voice_entries">
+        <item>American Female (Heart)</item>
+        <item>American Female (Alloy)</item>
+        <item>American Female (Aoede)</item>
+        <item>American Female (Bella)</item>
+        <item>American Female (Jessica)</item>
+        <item>American Female (Kore)</item>
+        <item>American Female (Nicole)</item>
+        <item>American Female (Nova)</item>
+        <item>American Female (River)</item>
+        <item>American Female (Sarah)</item>
+        <item>American Female (Sky)</item>
+        <item>American Male (Adam)</item>
+        <item>American Male (Echo)</item>
+        <item>American Male (Eric)</item>
+        <item>American Male (Fenrir)</item>
+        <item>American Male (Liam)</item>
+        <item>American Male (Michael)</item>
+        <item>American Male (Onyx)</item>
+        <item>American Male (Puck)</item>
+        <item>British Female (Alice)</item>
+        <item>British Female (Emma)</item>
+        <item>British Female (Isabella)</item>
+        <item>British Female (Lily)</item>
+        <item>British Male (Daniel)</item>
+        <item>British Male (Fable)</item>
+        <item>British Male (George)</item>
+        <item>British Male (Lewis)</item>
+    </string-array>
+
+    <string-array name="kokoro_voice_values">
+        <item>af_heart</item>
+        <item>af_alloy</item>
+        <item>af_aoede</item>
+        <item>af_bella</item>
+        <item>af_jessica</item>
+        <item>af_kore</item>
+        <item>af_nicole</item>
+        <item>af_nova</item>
+        <item>af_river</item>
+        <item>af_sarah</item>
+        <item>af_sky</item>
+        <item>am_adam</item>
+        <item>am_echo</item>
+        <item>am_eric</item>
+        <item>am_fenrir</item>
+        <item>am_liam</item>
+        <item>am_michael</item>
+        <item>am_onyx</item>
+        <item>am_puck</item>
+        <item>bf_alice</item>
+        <item>bf_emma</item>
+        <item>bf_isabella</item>
+        <item>bf_lily</item>
+        <item>bm_daniel</item>
+        <item>bm_fable</item>
+        <item>bm_george</item>
+        <item>bm_lewis</item>
+    </string-array>
+</resources>

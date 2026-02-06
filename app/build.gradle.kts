@@ -2,6 +2,36 @@ plugins {
     id("com.android.application")
 }
 
+// Task to download sherpa-onnx AAR if missing (for worktree builds)
+tasks.register("downloadSherpaAar") {
+    val aarFile = file("libs/sherpa-onnx-1.12.23.aar")
+    val libsDir = file("libs")
+    val urlString = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-1.12.23.aar"
+
+    outputs.file(aarFile)
+
+    doLast {
+        if (!aarFile.exists()) {
+            libsDir.mkdirs()
+            println("Downloading sherpa-onnx AAR from $urlString...")
+            // Use curl via Runtime.exec for reliable redirect handling
+            val process = Runtime.getRuntime().exec(arrayOf("curl", "-L", "-o", aarFile.absolutePath, urlString))
+            val exitCode = process.waitFor()
+            if (exitCode != 0) {
+                throw GradleException("Failed to download sherpa-onnx AAR (curl exit code: $exitCode)")
+            }
+            println("Downloaded sherpa-onnx AAR to ${aarFile.absolutePath}")
+        } else {
+            println("sherpa-onnx AAR already exists at ${aarFile.absolutePath}")
+        }
+    }
+}
+
+// Ensure AAR is downloaded before pre-build
+tasks.named("preBuild") {
+    dependsOn("downloadSherpaAar")
+}
+
 android {
     namespace = "com.ifautofab"
     compileSdk = 35
@@ -64,4 +94,16 @@ dependencies {
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.media:media:1.7.0")
+
+    // Coroutines (for async operations)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Sherpa-ONNX TTS (local AAR from official GitHub releases)
+    // Contains OfflineTts, OfflineTtsConfig, and native .so libraries
+    // Source: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-1.12.23.aar
+    // Use provider() for lazy evaluation to allow downloadSherpaAar task to run first
+    implementation(provider { file("libs/sherpa-onnx-1.12.23.aar") })
+
+    // Apache Commons Compress for tar.bz2 extraction
+    implementation("org.apache.commons:commons-compress:1.26.0")
 }
