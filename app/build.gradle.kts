@@ -102,7 +102,7 @@ dependencies {
     // Contains OfflineTts, OfflineTtsConfig, and native .so libraries
     // Source: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-1.12.23.aar
     // Use provider() for lazy evaluation to allow downloadSherpaAar task to run first
-    implementation(provider { file("libs/sherpa-onnx-1.12.23.aar") })
+    implementation(files("libs/sherpa-onnx-1.12.23.aar"))
 
     // Apache Commons Compress for tar.bz2 extraction
     implementation("org.apache.commons:commons-compress:1.26.0")

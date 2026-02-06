@@ -108,13 +108,13 @@ git submodule update --init --recursive
 
 ## Terminal/Desktop Support
 
-**Current status:** Planning stage
+**Current status:** Implemented (Z-machine only)
 
-**Active plan:** `TERMINAL_SIMPLE_PLAN.md` - ProcessBuilder-based approach
-- Use standalone bocfel binary (Z-machine only to start)
-- Simple Kotlin wrapper (~30 lines)
-- No JNI, no shared module, no multi-format complexity
-- Add other interpreters only if actually needed
+**Build:** `./gradlew :terminal:installDist`
+**Run:** `./terminal/build/install/terminal/bin/terminal game.z3`
+**Prerequisite:** `brew install frotz` (provides dfrotz interpreter)
+
+See: `terminal/README.md`
 
 **Archived approach:** Branch `archive/terminal-jni-shared-architecture`
 - Full JNI bridge implementation (1,471 lines)
