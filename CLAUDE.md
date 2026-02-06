@@ -111,10 +111,10 @@ git submodule update --init --recursive
 **Current status:** Planning stage
 
 **Active plan:** `TERMINAL_SIMPLE_PLAN.md` - ProcessBuilder-based approach
-- Use standalone interpreter binaries (bocfel, git, hugo)
-- Simple Kotlin wrapper (~50 lines)
-- No JNI, no shared module (yet)
-- Add features incrementally based on real needs
+- Use standalone bocfel binary (Z-machine only to start)
+- Simple Kotlin wrapper (~30 lines)
+- No JNI, no shared module, no multi-format complexity
+- Add other interpreters only if actually needed
 
 **Archived approach:** Branch `archive/terminal-jni-shared-architecture`
 - Full JNI bridge implementation (1,471 lines)

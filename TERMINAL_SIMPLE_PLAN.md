@@ -25,18 +25,9 @@ cc -DUNIX -o bocfel *.c -I../..
 # Commands: look, open mailbox, north, etc.
 ```
 
-### Step 1.3: Test other interpreters
-```bash
-cd ../git
-make -f Makefile.unix  # Glulx
-./git ~/some-game.ulx
+**Deliverable:** Proof that bocfel standalone works without any Kotlin/JNI code.
 
-cd ../hugo
-make  # Hugo games
-./hugo ~/some-game.hex
-```
-
-**Deliverable:** Proof that standalone binaries work without any Kotlin/JNI code.
+**Note:** If you later need Glulx support (.ulx files), build `git` interpreter similarly. Start with just Z-machine.
 
 **If standalone mode doesn't work or has issues:** Re-evaluate whether ProcessBuilder approach is viable. May need minimal GLK layer.
 
@@ -50,12 +41,10 @@ make  # Hugo games
 ```
 terminal/
 ├── build.gradle.kts           # Simple Kotlin/JVM project
-├── bin/                        # Compiled interpreter binaries
-│   ├── bocfel
-│   ├── git
-│   └── hugo
+├── bin/
+│   └── bocfel                 # Compiled Z-machine interpreter
 └── src/main/kotlin/
-    └── TerminalMain.kt        # ~50 lines total
+    └── TerminalMain.kt        # ~30 lines total
 ```
 
 ### Implementation
@@ -65,22 +54,9 @@ package com.ifautofab.terminal
 
 import java.io.File
 
-enum class GameFormat(val extensions: List<String>, val binary: String) {
-    ZCODE(listOf("z3", "z4", "z5", "z8"), "bocfel"),
-    GLULX(listOf("ulx", "gblorb"), "git"),
-    HUGO(listOf("hex"), "hugo"),
-    TADS2(listOf("gam"), "tads"),
-    TADS3(listOf("t3"), "tads")
-}
-
-fun detectFormat(file: File): GameFormat {
-    val ext = file.extension.lowercase()
-    return GameFormat.values().first { ext in it.extensions }
-}
-
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
-        println("Usage: terminal <game-file>")
+        println("Usage: terminal <game-file.z3|z5|z8>")
         return
     }
 
@@ -90,10 +66,14 @@ fun main(args: Array<String>) {
         return
     }
 
-    val format = detectFormat(gameFile)
-    val binaryPath = "bin/${format.binary}"
+    // Simple validation
+    val ext = gameFile.extension.lowercase()
+    if (ext !in listOf("z3", "z4", "z5", "z8")) {
+        println("Error: Only Z-machine games (.z3, .z4, .z5, .z8) supported")
+        return
+    }
 
-    val process = ProcessBuilder(binaryPath, gameFile.absolutePath)
+    val process = ProcessBuilder("bin/bocfel", gameFile.absolutePath)
         .inheritIO()  // Connect stdin/stdout directly
         .start()
 
@@ -125,7 +105,9 @@ dependencies {
 ./terminal/build/install/terminal/bin/terminal path/to/zork1.z3
 ```
 
-**Deliverable:** Working terminal IF player in ~50 lines of Kotlin. No JNI, no GLK, no shared module.
+**Deliverable:** Working Z-machine player in ~30 lines of Kotlin. No JNI, no GLK, no shared module.
+
+**Future:** If you need Glulx (.ulx) support later, add `git` binary and a simple format check. Don't add it until you need it.
 
 **Test:**
 - Zork 1 plays correctly
@@ -189,9 +171,9 @@ Uses macOS built-in TTS via `say` command. Zero dependencies.
 - Input handling (stdio vs Android EditText vs Car App SearchTemplate)
 
 **What MIGHT be worth sharing later:**
-- `GameFormat` enum (format detection logic is identical)
 - Copyright/boilerplate filters (same text patterns)
 - Save file path management (both platforms need it)
+- Game format detection (if supporting multiple formats)
 
 But wait until you have concrete examples of duplication, not theoretical ones.
 
@@ -201,14 +183,14 @@ But wait until you have concrete examples of duplication, not theoretical ones.
 
 | Aspect | Archived (JNI + Shared) | Simple (ProcessBuilder) |
 |--------|------------------------|------------------------|
-| **Lines of code** | 3,143 | ~50 (60x less) |
+| **Lines of code** | 3,143 | ~30 (100x less) |
 | **Build complexity** | CMake + JNI + Gradle | Just Gradle |
 | **Native debugging** | lldb + gdb | None needed |
 | **Memory safety** | Manual (JNI refs, GC) | Automatic (Kotlin only) |
 | **Crashes** | Native segfaults | Process crashes, app survives |
 | **Time to working** | Days (building GLK bridge) | Hours (thin wrapper) |
 | **Maintenance burden** | High (C + Kotlin + interfaces) | Low (Kotlin only) |
-| **Premature abstractions** | Shared module for 2 platforms | None until 3rd platform |
+| **Premature abstractions** | Shared module + multi-format support | Single interpreter, Z-machine only |
 
 ---
 
@@ -216,9 +198,9 @@ But wait until you have concrete examples of duplication, not theoretical ones.
 
 ### When Simple Approach Might Not Work
 
-1. **If standalone mode doesn't exist** for all interpreters
-   - Some interpreters may require GLK (check first!)
-   - Solution: Use interpreters that do support standalone, or minimal GLK wrapper
+1. **If bocfel standalone mode doesn't work**
+   - Test first (Stage 1) before building anything
+   - Solution: Minimal GLK wrapper or use pre-built frotz/fizmo binaries
 
 2. **If you need real-time output interception**
    - ProcessBuilder with `inheritIO()` pipes directly to terminal
@@ -249,7 +231,9 @@ Then the JNI bridge approach becomes necessary. But validate the need first.
 4. **Add Stage 3 features** only when users request them
 5. **Extract shared code** only when building 3rd platform
 
-Total time to working terminal: **3 hours** instead of days/weeks.
+Total time to working Z-machine player: **3 hours** instead of days/weeks.
+
+Add other interpreters (Glulx, TADS, Hugo) only if you actually need them.
 
 ---
 
