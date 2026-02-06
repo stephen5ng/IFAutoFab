@@ -106,6 +106,21 @@ git submodule update --init --recursive
 | .h30, .hex | hugo | hugo |
 | .a3c | alan | alan |
 
+## Terminal/Desktop Support
+
+**Current status:** Planning stage
+
+**Active plan:** `TERMINAL_SIMPLE_PLAN.md` - ProcessBuilder-based approach
+- Use standalone interpreter binaries (bocfel, git, hugo)
+- Simple Kotlin wrapper (~50 lines)
+- No JNI, no shared module (yet)
+- Add features incrementally based on real needs
+
+**Archived approach:** Branch `archive/terminal-jni-shared-architecture`
+- Full JNI bridge implementation (1,471 lines)
+- Shared module with GameEngine interfaces (230 lines)
+- Preserved for reference if standalone mode proves insufficient
+
 ## Troubleshooting
 
 **NDK build fails:** Clear cache and rebuild
