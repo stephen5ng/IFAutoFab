@@ -2,7 +2,15 @@ package com.ifautofab.parser
 
 import android.util.Log
 import com.ifautofab.TextOutputInterceptor
+import com.ifautofab.parser.llm.CloudLLMCommandRewriter
+import com.ifautofab.parser.llm.LLMConfig
+import com.ifautofab.parser.llm.LLMConfigManager
+import com.ifautofab.parser.llm.LLMProvider
 import com.luxlunae.glk.model.GLKModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Android logger implementation for ParserFlowCoordinator.
@@ -59,6 +67,12 @@ object ParserFlowCoordinator {
     // Reference to GLKModel for context extraction
     private var model: GLKModel? = null
 
+    // LLM rewriter (initialized when game loads with vocabulary)
+    private var llmRewriter: CloudLLMCommandRewriter? = null
+
+    // Coroutine scope for async LLM calls
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     // Track if we're currently processing a retry (to avoid re-processing)
     @Volatile
     private var isProcessingRetry = false
@@ -89,6 +103,54 @@ object ParserFlowCoordinator {
      */
     fun setModel(model: GLKModel?) {
         this.model = model
+    }
+
+    /**
+     * Initializes the LLM rewriter with the game's vocabulary.
+     * Call this when a game is loaded.
+     *
+     * @param vocabulary The extracted game vocabulary
+     * @param apiKey The Groq API key (or other provider key)
+     */
+    fun initializeLLM(vocabulary: ZMachineVocabulary, apiKey: String) {
+        try {
+            val config = LLMConfig(
+                provider = LLMProvider.GROQ,
+                apiKey = apiKey,
+                model = "llama-3.1-8b-instant",  // Fast model
+                maxTokens = 50,
+                temperature = 0.3
+            )
+
+            llmRewriter = CloudLLMCommandRewriter(config, vocabulary)
+
+            logger.i(TAG, "LLM rewriter initialized with ${vocabulary.verbs.size} verbs, " +
+                    "${vocabulary.nouns.size} nouns, ${vocabulary.prepositions.size} prepositions")
+        } catch (e: Exception) {
+            logger.e(TAG, "Failed to initialize LLM rewriter: ${e.message}", e)
+            llmRewriter = null
+        }
+    }
+
+    /**
+     * Initializes the LLM rewriter using LLMConfigManager.
+     * Call this before starting a game if you've configured LLM globally.
+     */
+    fun initializeLLM() {
+        try {
+            if (!LLMConfigManager.isConfigured()) {
+                logger.w(TAG, "LLM not configured in LLMConfigManager - skipping LLM initialization")
+                return
+            }
+
+            val config = LLMConfigManager.getConfig()
+
+            // Note: We need vocabulary which will be extracted from the game file
+            // This is a placeholder - vocabulary should be passed when game loads
+            logger.i(TAG, "LLM configured with ${config.provider} ${config.model}")
+        } catch (e: Exception) {
+            logger.e(TAG, "Failed to initialize LLM: ${e.message}", e)
+        }
     }
 
     /**
@@ -176,32 +238,77 @@ object ParserFlowCoordinator {
 
         // Attempt rewrite
         val context = extractGameContext()
-        val rewritten = PlaceholderRewriter.attemptRewrite(command, error, context)
 
-        if (rewritten != null) {
-            // Mark the rewrite attempt
-            stateMachine.onRetrySent(rewritten)
-            ParserWrapper.markRewriteAttempted(rewritten)
-            ParserLogger.logRewriteAttempted(command, rewritten, error)
+        // Use LLM rewriter if available, otherwise fallback to PlaceholderRewriter
+        if (llmRewriter != null && llmRewriter!!.isAvailable()) {
+            logger.d(TAG, "Attempting LLM rewrite")
 
-            logger.i(TAG, "Rewrite ready: '$command' → '$rewritten'")
-
-            // Invoke the retry listener to send the command
-            val listener = retryListener
-            if (listener != null) {
-                isProcessingRetry = true
+            // Launch coroutine for async API call
+            coroutineScope.launch {
                 try {
-                    listener.onRetryReady(command, rewritten)
-                } finally {
-                    isProcessingRetry = false
+                    val rewritten = llmRewriter!!.attemptRewrite(command, error, context)
+
+                    if (rewritten != null) {
+                        // Mark the rewrite attempt
+                        stateMachine.onRetrySent(rewritten)
+                        ParserWrapper.markRewriteAttempted(rewritten)
+                        ParserLogger.logRewriteAttempted(command, rewritten, error)
+
+                        logger.i(TAG, "LLM rewrite ready: '$command' → '$rewritten'")
+
+                        // Invoke the retry listener to send the command
+                        val listener = retryListener
+                        if (listener != null) {
+                            isProcessingRetry = true
+                            try {
+                                listener.onRetryReady(command, rewritten)
+                            } finally {
+                                isProcessingRetry = false
+                            }
+                        } else {
+                            logger.w(TAG, "No retry listener registered - LLM rewrite will not be sent")
+                        }
+                    } else {
+                        logger.i(TAG, "LLM could not rewrite command, falling back")
+                        ParserLogger.logFallback(command, error, "LLM returned null")
+                        stateMachine.reset()
+                    }
+                } catch (e: Exception) {
+                    logger.e(TAG, "LLM rewrite failed: ${e.message}", e)
+                    ParserLogger.logFallback(command, error, "LLM API error: ${e.message}")
+                    stateMachine.reset()
                 }
-            } else {
-                logger.w(TAG, "No retry listener registered - retry will not be sent")
             }
         } else {
-            logger.i(TAG, "No rewrite available, falling back to original error")
-            ParserLogger.logFallback(command, error, "No rewrite available")
-            stateMachine.reset()
+            // Fallback to PlaceholderRewriter
+            logger.d(TAG, "LLM not available, using PlaceholderRewriter")
+            val rewritten = PlaceholderRewriter.attemptRewrite(command, error, context)
+
+            if (rewritten != null) {
+                // Mark the rewrite attempt
+                stateMachine.onRetrySent(rewritten)
+                ParserWrapper.markRewriteAttempted(rewritten)
+                ParserLogger.logRewriteAttempted(command, rewritten, error)
+
+                logger.i(TAG, "Rewrite ready: '$command' → '$rewritten'")
+
+                // Invoke the retry listener to send the command
+                val listener = retryListener
+                if (listener != null) {
+                    isProcessingRetry = true
+                    try {
+                        listener.onRetryReady(command, rewritten)
+                    } finally {
+                        isProcessingRetry = false
+                    }
+                } else {
+                    logger.w(TAG, "No retry listener registered - retry will not be sent")
+                }
+            } else {
+                logger.i(TAG, "No rewrite available, falling back to original error")
+                ParserLogger.logFallback(command, error, "No rewrite available")
+                stateMachine.reset()
+            }
         }
     }
 
@@ -252,6 +359,10 @@ object ParserFlowCoordinator {
         retryListener = null
         isProcessingRetry = false
         isInitialized = false
+
+        // Clear LLM rewriter
+        llmRewriter = null
+
         logger.i(TAG, "Shutdown")
     }
 

@@ -16,6 +16,11 @@ import java.nio.ByteBuffer
 import com.ifautofab.parser.ParserFlowCoordinator
 import com.ifautofab.parser.ParserLogger
 import com.ifautofab.parser.ParserWrapper
+import com.ifautofab.parser.ZMachineVocabulary
+import com.ifautofab.parser.ZMachineVocabularyExtractor
+import com.ifautofab.parser.llm.LLMConfigManager
+import com.ifautofab.parser.llm.LLMProvider
+import java.util.Properties
 
 /**
  * Singleton engine to manage the GLK interpreter lifecycle.
@@ -131,6 +136,9 @@ object GLKGameEngine {
                 ParserWrapper.isEnabled = true
                 ParserWrapper.isDebugMode = parserDebug
                 ParserLogger.logSessionStarted(gameFile.name)
+
+                // Extract vocabulary and initialize LLM
+                initializeLLMForGame(gameFile)
             }
 
             m.setViewUpdateListener {
@@ -490,5 +498,58 @@ object GLKGameEngine {
         }
         
         return false
+    }
+
+    /**
+     * Extracts vocabulary from the game file and initializes the LLM rewriter.
+     * This enables AI-powered command rewriting for parser errors.
+     */
+    private fun initializeLLMForGame(gameFile: File) {
+        try {
+            // Check if this is a Z-machine file that supports vocabulary extraction
+            val ext = gameFile.extension.lowercase()
+            if (ext !in listOf("z3", "z4", "z5", "z6", "z7", "z8")) {
+                Log.d("GLKGameEngine", "Not a Z-machine file ($ext), skipping LLM initialization")
+                return
+            }
+
+            // Extract vocabulary from game file
+            Log.i("GLKGameEngine", "Extracting vocabulary from ${gameFile.name}...")
+            val vocabulary = ZMachineVocabularyExtractor.extract(gameFile)
+
+            if (vocabulary == null) {
+                Log.w("GLKGameEngine", "Failed to extract vocabulary, LLM rewriter will not be available")
+                return
+            }
+
+            Log.i("GLKGameEngine", "Vocabulary extracted: ${vocabulary.verbs.size} verbs, " +
+                    "${vocabulary.nouns.size} nouns, ${vocabulary.adjectives.size} adjectives, " +
+                    "${vocabulary.prepositions.size} prepositions")
+
+            // Load API key from local.properties
+            val apiKey = loadGroqApiKey()
+            if (apiKey == null) {
+                Log.w("GLKGameEngine", "No Groq API key found in local.properties, LLM rewriter will not be available")
+                Log.i("GLKGameEngine", "To enable LLM rewrites, add groq.api.key to local.properties")
+                return
+            }
+
+            // Initialize LLM rewriter with extracted vocabulary
+            ParserFlowCoordinator.initializeLLM(vocabulary, apiKey)
+
+            Log.i("GLKGameEngine", "✅ LLM rewriter initialized successfully!")
+            Log.i("GLKGameEngine", "Commands like 'grab key' will be auto-rewritten to 'take key'")
+
+        } catch (e: Exception) {
+            Log.e("GLKGameEngine", "Failed to initialize LLM rewriter: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Loads Groq API key from BuildConfig.
+     */
+    private fun loadGroqApiKey(): String? {
+        val key = BuildConfig.GROQ_API_KEY
+        return if (key.isNotEmpty() && !key.startsWith("your-")) key else null
     }
 }

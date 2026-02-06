@@ -48,6 +48,18 @@ android {
                 arguments("-DANDROID_STL=c++_shared")
             }
         }
+
+        val properties = java.util.Properties()
+        val localPropertiesFile = project.rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(localPropertiesFile.inputStream())
+        }
+        val groqKey = properties.getProperty("groq.api.key") ?: ""
+        buildConfigField("String", "GROQ_API_KEY", "\"$groqKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {
