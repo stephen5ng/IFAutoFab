@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "IFAutoFab"
 include(":app")
+include(":terminal")

@@ -106,6 +106,21 @@ git submodule update --init --recursive
 | .h30, .hex | hugo | hugo |
 | .a3c | alan | alan |
 
+## Terminal/Desktop Support
+
+**Current status:** Implemented (Z-machine only)
+
+**Build:** `./gradlew :terminal:installDist`
+**Run:** `./terminal/build/install/terminal/bin/terminal game.z3`
+**Prerequisite:** `brew install frotz` (provides dfrotz interpreter)
+
+See: `terminal/README.md`
+
+**Archived approach:** Branch `archive/terminal-jni-shared-architecture`
+- Full JNI bridge implementation (1,471 lines)
+- Shared module with GameEngine interfaces (230 lines)
+- Preserved for reference if standalone mode proves insufficient
+
 ## Troubleshooting
 
 **NDK build fails:** Clear cache and rebuild
