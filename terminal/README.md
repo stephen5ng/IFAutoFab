@@ -14,6 +14,26 @@ Simple command-line player for Z-machine interactive fiction games (Zork, etc.).
 ./terminal/build/install/terminal/bin/terminal path/to/game.z3
 ```
 
+## Options
+
+```
+--tts           Speak game output using macOS 'say' command
+--transcript    Save game transcript to ~/.ifautofab/transcripts/
+--save-dir DIR  Set working directory for save files (default: ~/.ifautofab/saves/)
+```
+
+Examples:
+```bash
+# Basic play
+./terminal/build/install/terminal/bin/terminal app/src/main/assets/games/zork1.z3
+
+# With TTS and transcript
+./terminal/build/install/terminal/bin/terminal --tts --transcript app/src/main/assets/games/zork1.z3
+
+# Custom save directory
+./terminal/build/install/terminal/bin/terminal --save-dir ~/zork-saves app/src/main/assets/games/zork1.z3
+```
+
 ## Supported Formats
 
 - .z3 (Z-machine version 3)
@@ -26,6 +46,7 @@ Simple command-line player for Z-machine interactive fiction games (Zork, etc.).
 - Uses `dfrotz` (dumb frotz) Z-machine interpreter
 - Kotlin wrapper handles argument parsing and process management
 - No JNI, no Android dependencies, pure JVM
+- When `--tts` or `--transcript` is used, output is intercepted via manual I/O piping; otherwise uses simple `inheritIO()`
 
 ## Prerequisites
 
@@ -44,6 +65,7 @@ apt install frotz     # Linux
 | - Validates input                    |
 | - Finds dfrotz on PATH              |
 | - Launches dfrotz subprocess         |
+| - Optional: TTS, transcript capture  |
 +----------------+--------------------+
                  | ProcessBuilder
                  v
@@ -54,13 +76,9 @@ apt install frotz     # Linux
 +-------------------------------------+
 ```
 
-Total code: ~50 lines of Kotlin
-
 ## Future Enhancements
 
 - Add Glulx support (use `git` interpreter)
-- Capture output for TTS integration
 - Command history (if terminal doesn't provide it)
-- Transcript/save location management
 
 See: TERMINAL_SIMPLE_PLAN.md
