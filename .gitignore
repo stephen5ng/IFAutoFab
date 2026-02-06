@@ -46,3 +46,9 @@ samples/
 file_info.txt
 build_output.txt
 
+# Optional integration tests (require local API keys)
+app/src/test/java/com/ifautofab/parser/llm/GeminiIntegrationTest.kt
+app/src/test/java/com/ifautofab/parser/llm/GroqIntegrationTest.kt
+app/src/test/java/com/ifautofab/parser/llm/TestRewriteLocally.kt
+app/src/androidTest/
+
