@@ -5,9 +5,11 @@
 
 ## Project Goal
 
-Build a Z-machine wrapper that preserves classic parser behavior while reducing parser friction by using a tightly constrained LLM to rewrite failed player commands into valid canonical game commands. The system must not solve puzzles, invent objects, or alter game logic, and must support offline/local execution including Android.
+Build on the existing LLM command rewriting in IFAutoFab's terminal module to reduce parser friction by using a tightly constrained LLM to rewrite failed player commands into valid canonical game commands. The system must not solve puzzles, invent objects, or alter game logic, and must support offline/local execution including Android.
 
 **Scope**: Z-machine games only (.z3–.z8). The architecture should allow future extension to Glulx/TADS/Hugo, but these are explicitly out of scope for v1.
+
+**Starting point**: Existing LLM rewriting in `TerminalMain.kt` (branch `main`). This plan extends that foundation with vocabulary-aware validation, parser failure detection, and local model support.
 
 ---
 
@@ -22,11 +24,6 @@ Build a Z-machine wrapper that preserves classic parser behavior while reducing 
 - **Minimal context**: Provide only the last game output (room description or response) to the LLM
 - Rationale: Reduces token cost, simplifies implementation, sufficient for most rewrites
 - Future consideration: Escalate to richer context if accuracy proves insufficient
-
-### Privacy Considerations
-- Cloud mode transmits player commands to external APIs (OpenAI/Anthropic/Google)
-- Users must opt-in to cloud mode with clear disclosure
-- Local-only mode must be fully functional without network access
 
 ---
 
@@ -44,16 +41,13 @@ Different failure types require different rewrite strategies:
 
 ---
 
-## Phase 0: Alignment & Constraints (Week 0)
+## Phase 0: Setup & Target Games (Week 0)
 
 **Objectives**
-- Define success criteria (e.g., parser failure reduction %, latency targets)
-- Agree on explicit non-goals (no hinting, no puzzle solving, no state inference)
 - Select initial target games (e.g., Zork I, Planetfall, Hitchhiker's Guide)
+- Define non-goals (no hinting, no puzzle solving, no state inference)
 
 **Deliverables**
-- Written design constraints document
-- Acceptance criteria with quantitative targets
 - Test game corpus (minimum 5 games spanning different Infocom eras)
 
 ---
@@ -62,9 +56,11 @@ Different failure types require different rewrite strategies:
 
 **Objectives**
 - Implement Z-machine input interception
-- Reliably detect parser failure (categorize by failure type—see table above)
+- Detect parser failures using a two-tier approach:
+  - **Regex catalog** for known compiler families (Infocom, Inform 6/7) — covers ~90% of target games
+  - **Catch-all heuristic** for unknown compilers: short responses (<~80 chars) that don't describe room/object changes are likely errors
 - Allow a single rewritten retry only
-- Implement strict fallback to native parser error
+- If the rewrite also fails, show both: the original error and what was attempted ("Tried rephrasing as 'take leaflet', but: You can't see any such thing.")
 - **Extract vocabulary table from Z-machine game files**
 
 **Vocabulary Extraction**
@@ -85,9 +81,9 @@ Z-machine files contain embedded dictionary data:
 
 **Objectives**
 - Design and iterate on a strict rewrite-only prompt
-- Implement output validation using **extracted game vocabulary**:
-  - Verb validation against game's actual verb list
-  - Noun validation against game's dictionary
+- Implement **soft** output validation using extracted game vocabulary:
+  - Verb validation against game's actual verb list (reject if verb not found)
+  - Noun validation against game's dictionary (warn but allow — dictionaries may be incomplete or truncated)
   - Syntax guardrails (VERB [NOUN] [PREP NOUN] patterns)
 - Log all failed commands and rewrite attempts
 - Define minimal context format (last game output only)
@@ -106,113 +102,49 @@ Z-machine files contain embedded dictionary data:
 
 ---
 
-## Phase 3: Dataset Construction (Weeks 5–6)
+## Phase 3: Local Model Evaluation (Weeks 5–6)
 
 **Objectives**
-- Collect real parser-failure inputs from:
-  - Manual playtesting sessions
-  - Historical IF transcripts (ClubFloyd, IFDB)
-  - Synthetic generation (intentional typos, synonym substitution)
-- Use high-end LLMs (GPT-4 / Gemini Ultra / Opus) to generate gold-standard rewrites
-- Generate negative examples returning `<NO_VALID_REWRITE>`
-- Balance dataset across failure categories
+- Evaluate whether a prompted (non-fine-tuned) small model works well enough
+  - Candidates: Phi-3, Gemma 2B, Qwen 1.5B
+- Test with the same prompt and vocabulary validation from Phase 2
+- Compare accuracy against cloud model baseline
+- If local model feels good enough in practice → proceed to Phase 4 with local
+- If not → use cloud as default, revisit fine-tuning later using logs from real play sessions
 
-**Dataset Schema**
-```json
-{
-  "game": "zork1",
-  "failed_command": "grab the leaflet",
-  "last_output": "West of House\nYou are standing in an open field...",
-  "failure_type": "unknown_verb",
-  "gold_rewrite": "take leaflet",
-  "vocabulary_context": ["take", "drop", "open", "leaflet", "mailbox", "house"]
-}
-```
+**Evaluation Approach**
+- Build a small test set of synthetic failures (typos, synonyms, rephrasing) without playing through the games
+- Benchmark inference latency and memory on Pixel 7a / Tensor G2
+- Qualitative gut check: try it on a few rooms and see if the rewrites feel right
 
 **Deliverables**
-- Curated training dataset (JSONL, target: 10,000+ examples)
-- Dataset documentation and schema
-- Train/validation/test splits
-- Category distribution analysis
+- Comparison notes: local models vs cloud baseline
+- Decision on local vs cloud-only for v1
 
 ---
 
-## Phase 4: Model Distillation & Fine-Tuning (Weeks 7–8)
+## Phase 4: Android Integration (Weeks 7–8)
 
 **Objectives**
-- Select open-source base model (1B–3B parameter range)
-  - Candidates: Phi-3, Gemma 2B, TinyLlama, Qwen 1.5B
-- Fine-tune using cloud GPU infrastructure
-- Evaluate accuracy vs cloud reference model
-- **Build offline test harness** for model evaluation without cloud dependency
-
-**Evaluation Metrics**
-- Exact match rate (rewrite matches gold standard)
-- Valid rewrite rate (rewrite parses successfully in game)
-- False positive rate (rewrites that change intended meaning)
-- `<NO_VALID_REWRITE>` precision/recall
+- If local model passed Phase 3: integrate via llama.cpp / MediaPipe LLM / GGUF runtime
+- If local model insufficient: integrate cloud-only path
+- Quantize local model (4–8 bit) if applicable
+- Integrate into IFAutoFab app
+- Show rewritten command in game output ("Rephrased as: …")
+- Toggle between off / local / cloud modes
 
 **Deliverables**
-- Fine-tuned model weights
-- Evaluation report (accuracy, failure modes, per-category breakdown)
-- Training configuration files
-- Offline evaluation harness
+- Working end-to-end integration in IFAutoFab
+- Basic mode toggle (off / local / cloud)
 
 ---
 
-## Phase 5: Local Inference & Android Support (Weeks 9–10)
-
-**Objectives**
-- Quantize model (4–8 bit) targeting <1s inference
-- Integrate via llama.cpp / MediaPipe LLM / GGUF runtime
-- Benchmark performance on representative Android hardware:
-  - Low-end: Pixel 7a / Tensor G2 (8GB RAM)
-  - Mid-range: Snapdragon 778G
-  - High-end: Snapdragon 8 Gen 2
-- Validate accuracy preservation post-quantization
-
-**Deliverables**
-- Android-compatible inference module (.so or AAR)
-- Performance benchmarks (latency, memory, battery impact per rewrite)
-- Quantization comparison report (4-bit vs 8-bit accuracy/speed tradeoff)
-- Integration guide for IFAutoFab codebase
-
----
-
-## Phase 6: UX & Transparency Layer (Weeks 11–12)
-
-> **Note**: Expanded from 1 week to 2 weeks to adequately cover UX, settings, and optimization work.
-
-**Objectives**
-- Optional display of rewritten command ("Rephrased as: …")
-- Settings UI:
-  - Local-only mode (default) vs cloud fallback
-  - Strict / purist mode (LLM disabled entirely)
-  - Transparency level (silent, show rewrites, verbose logging)
-- Battery optimization (batch inference, idle shutdown)
-- Accessibility review (screen reader compatibility for rewrite notifications)
-
-**Privacy & Transparency**
-- Clear disclosure when cloud mode is enabled
-- No persistent logging of commands in production (opt-in only)
-- Rewrite history viewable by player on request
-
-**Deliverables**
-- Player-facing settings UI
-- Privacy policy updates
-- Accessibility audit results
-- Battery impact documentation
-
----
-
-## Phase 7: Testing, Ethics & Release Prep (Week 13)
+## Phase 5: Testing (Week 9)
 
 **Objectives**
 - Regression testing across test game corpus (minimum 5 games)
-- Adversarial testing: ensure no puzzle bypass or state leakage
-- Red-team exercise: attempt to extract hints via prompt injection
-- License and compliance review (model weights, training data provenance)
-- Performance validation on target devices
+- Verify no puzzle bypass or state leakage
+- Performance validation on Pixel 7a
 
 **Test Scenarios**
 - [ ] Typo correction preserves player intent
@@ -223,27 +155,22 @@ Z-machine files contain embedded dictionary data:
 - [ ] Graceful degradation when model unavailable
 
 **Deliverables**
-- Release candidate
-- Automated test suite
-- Security/ethics audit report
-- Documentation and maintenance guide
+- Automated test suite covering above scenarios
 
 ---
 
 ## Future Considerations (Out of Scope for v1)
 
+- **Fine-tuning**: If prompted local models aren't accurate enough, collect rewrite logs from real play sessions and fine-tune a small model on actual failure data
 - **Multi-interpreter support**: Extend to Glulx (.ulx, .gblorb), TADS (.t2, .t3), Hugo (.hex)
 - **Rich context mode**: Include inventory, recent commands, and room history
 - **Adaptive context**: Escalate context depth on repeated failures
 - **Fast-path optimization**: Levenshtein-based typo correction before LLM (battery savings)
-- **Collaborative dataset**: Allow players to contribute anonymized failure/rewrite pairs
 
 ---
 
 ## Final Outputs
 
-- Z-machine wrapper with LLM parser repair
-- Local, Android-capable intent-rewrite model (<500MB)
+- Z-machine wrapper with LLM parser repair (cloud, with optional local inference)
 - Vocabulary extraction tooling
-- Full documentation and maintenance guide
-- Privacy-respecting, user-configurable experience
+- Automated test suite
