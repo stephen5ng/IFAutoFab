@@ -89,6 +89,9 @@ fun main(args: Array<String>) {
     val saveDir = File(saveDirArg ?: "${System.getProperty("user.home")}/.ifautofab/saves")
     saveDir.mkdirs()
 
+    // Setup TTS
+    val ttsQueue = if (ttsEnabled) TTSQueue() else null
+
     println("Starting ${gameFile.name}...")
     println("(Type 'quit' to exit game)\n")
 
@@ -162,6 +165,7 @@ fun main(args: Array<String>) {
                         if (rewrite != null) {
                             // Print colorful rewrite notification
                             println("\n\n  $ANSI_YELLOW[LLM Rewrite: \"$originalCmd\" -> \"$rewrite\"]$ANSI_RESET")
+                            ttsQueue?.add("Rewriting command to $rewrite")
                             
                             // Inject command output simulation
                             println("> $rewrite") 
@@ -186,7 +190,7 @@ fun main(args: Array<String>) {
                 val line = buffer.toString().trim()
                 if (line.isNotEmpty() && line != ">") {
                     transcript?.appendLine(line)
-                    if (ttsEnabled) speak(line)
+                    ttsQueue?.add(line)
                 }
                 buffer.clear()
             }
@@ -196,6 +200,7 @@ fun main(args: Array<String>) {
     } catch (_: Exception) { }
 
     val exitCode = process.waitFor()
+    ttsQueue?.shutdown()
 
     if (transcript != null) {
         val transcriptDir = File("${System.getProperty("user.home")}/.ifautofab/transcripts")
@@ -230,12 +235,6 @@ private fun loadApiKey(): String? {
     return System.getenv("GROQ_API_KEY")
 }
 
-private fun speak(text: String) {
-    try {
-        ProcessBuilder("say", text).start()
-    } catch (_: Exception) { }
-}
-
 private fun findDfrotz(): String? {
     val candidates = listOf(
         "/opt/homebrew/bin/dfrotz",
@@ -259,4 +258,43 @@ private fun findDfrotz(): String? {
 private fun extractFlagValue(args: Array<String>, flag: String): String? {
     val index = args.indexOf(flag)
     return if (index >= 0 && index + 1 < args.size) args[index + 1] else null
+}
+
+class TTSQueue {
+    private val queue = java.util.concurrent.LinkedBlockingQueue<String>()
+    private val thread = Thread {
+        try {
+            while (!Thread.currentThread().isInterrupted) {
+                val text = queue.take()
+                if (text == "POISON_PILL") break
+                speak(text)
+            }
+        } catch (e: InterruptedException) {
+            // Exit
+        }
+    }
+
+    init {
+        thread.isDaemon = true
+        thread.start()
+    }
+
+    fun add(text: String) {
+        // Simple heuristics to avoid speaking non-text UI elements
+        if (text.isBlank()) return
+        if (text.startsWith("Score:") && text.contains("Moves:")) return // Skip Status bar
+        
+        queue.offer(text)
+    }
+
+    fun shutdown() {
+        queue.offer("POISON_PILL")
+    }
+
+    private fun speak(text: String) {
+        try {
+            // Use 'say' command on macOS, wait for it to finish so we don't talk over ourselves
+            ProcessBuilder("say", text).start().waitFor()
+        } catch (_: Exception) { }
+    }
 }
