@@ -125,6 +125,26 @@ Key components:
 See: `terminal/README.md` for full details
 See: `LLM_Parser_Repair_Project_Plan.md` for roadmap
 
+### Auto-Mapper (Planned)
+
+**Status:** Planning complete, implementation pending
+**Scope:** Terminal-only MVP, Z-machine games
+
+Automatic mapping system that detects room transitions and renders real-time ASCII maps:
+- Memory polling to detect player location changes (no C modifications)
+- Graph-based world model with 3D coordinates (x, y, level)
+- Auto-render after every move with 4-letter room codes (e.g., `[KITC]`)
+- JSON persistence for map state across sessions
+- Future: Android graphical port
+
+**Planned components:**
+- `mapper/WorldGraph.kt` — Graph data structure
+- `mapper/ZMachineMemoryReader.kt` — Object table access
+- `mapper/AsciiMapRenderer.kt` — Terminal rendering
+- `mapper/MapPersistence.kt` — JSON save/load
+
+See: `z_machine_mapper_plan.md` for complete implementation plan
+
 **Archived approach:** Branch `archive/terminal-jni-shared-architecture`
 
 ## Troubleshooting
