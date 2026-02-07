@@ -52,3 +52,6 @@ app/src/test/java/com/ifautofab/parser/llm/GroqIntegrationTest.kt
 app/src/test/java/com/ifautofab/parser/llm/TestRewriteLocally.kt
 app/src/androidTest/
 
+# TTS dependencies (downloaded via download_tts_deps.sh)
+terminal/libs/
+terminal/models/
