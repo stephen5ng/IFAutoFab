@@ -13,4 +13,5 @@ kotlin {
 
 dependencies {
     implementation(kotlin("stdlib"))
+    testImplementation("junit:junit:4.13.2")
 }

@@ -38,6 +38,7 @@ fun main(args: Array<String>) {
         println("  --transcript    Save game transcript to ~/.ifautofab/transcripts/")
         println("  --save-dir DIR  Set working directory for save files")
         println("                  (default: ~/.ifautofab/saves/)")
+        println("  --dump-vocab    Extract and print vocabulary from game file")
         println()
         println("Example:")
         println("  terminal --llm app/src/main/assets/games/zork1.z3")
@@ -53,6 +54,32 @@ fun main(args: Array<String>) {
     val ext = gameFile.extension.lowercase()
     if (ext !in listOf("z3", "z4", "z5", "z8")) {
         println("${ANSI_YELLOW}Error: Only Z-machine games (.z3, .z4, .z5, .z8) supported$ANSI_RESET")
+        return
+    }
+
+    // Handle --dump-vocab flag
+    if ("--dump-vocab" in flags) {
+        val vocabulary = VocabularyExtractor.extract(gameFile)
+        if (vocabulary != null) {
+            println("${ANSI_CYAN}${vocabulary.getSummary()}$ANSI_RESET")
+            println()
+            println("${ANSI_GREEN}Verbs (${vocabulary.verbs.size}):$ANSI_RESET")
+            vocabulary.verbs.sorted().forEach { println("  $it") }
+            println()
+            println("${ANSI_GREEN}Nouns (${vocabulary.nouns.size}):$ANSI_RESET")
+            vocabulary.nouns.sorted().forEach { println("  $it") }
+            println()
+            println("${ANSI_GREEN}Adjectives (${vocabulary.adjectives.size}):$ANSI_RESET")
+            vocabulary.adjectives.sorted().forEach { println("  $it") }
+            println()
+            println("${ANSI_GREEN}Prepositions (${vocabulary.prepositions.size}):$ANSI_RESET")
+            vocabulary.prepositions.sorted().forEach { println("  $it") }
+            if (vocabulary.misc.isNotEmpty()) {
+                println()
+                println("${ANSI_GREEN}Other (${vocabulary.misc.size}):$ANSI_RESET")
+                vocabulary.misc.sorted().forEach { println("  $it") }
+            }
+        }
         return
     }
 
