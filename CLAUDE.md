@@ -108,18 +108,24 @@ git submodule update --init --recursive
 
 ## Terminal/Desktop Support
 
-**Current status:** Implemented (Z-machine only)
+**Current status:** Implemented (Z-machine only), with LLM parser repair
 
 **Build:** `./gradlew :terminal:installDist`
 **Run:** `./terminal/build/install/terminal/bin/terminal game.z3`
+**With LLM:** `./terminal/build/install/terminal/bin/terminal --llm game.z3`
 **Prerequisite:** `brew install frotz` (provides dfrotz interpreter)
 
-See: `terminal/README.md`
+Key components:
+- `TerminalMain.kt` — dfrotz wrapper, retry state machine, CLI options
+- `LLMRewriter.kt` — Groq API integration, vocab-aware prompt, validation
+- `ParserFailureDetector.kt` — Regex catalog (Infocom, Inform 6/7) + catch-all heuristic
+- `VocabularyExtractor.kt` — Pure Kotlin Z-machine dictionary parser
+- `RewriteLogger.kt` — JSONL logging of rewrite attempts
+
+See: `terminal/README.md` for full details
+See: `LLM_Parser_Repair_Project_Plan.md` for roadmap
 
 **Archived approach:** Branch `archive/terminal-jni-shared-architecture`
-- Full JNI bridge implementation (1,471 lines)
-- Shared module with GameEngine interfaces (230 lines)
-- Preserved for reference if standalone mode proves insufficient
 
 ## Troubleshooting
 
