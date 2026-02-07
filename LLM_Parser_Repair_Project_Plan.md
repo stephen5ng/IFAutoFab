@@ -44,11 +44,17 @@ Different failure types require different rewrite strategies:
 ## Phase 0: Setup & Target Games (Week 0)
 
 **Objectives**
-- Select initial target games (e.g., Zork I, Planetfall, Hitchhiker's Guide)
 - Define non-goals (no hinting, no puzzle solving, no state inference)
 
-**Deliverables**
-- Test game corpus (minimum 5 games spanning different Infocom eras)
+**Test Game Corpus**
+
+| Game | Author/Year | Format | Parser Family |
+|------|-------------|--------|---------------|
+| Hitchhiker's Guide | Adams/Infocom, 1984 | .z3 | Infocom |
+| Zork I | Infocom, 1980 | .z3 | Infocom |
+| Planetfall | Infocom, 1983 | .z3 | Infocom |
+| Lost Pig | Admiral Jota, 2007 | .z8 | Inform 7 |
+| Spider and Web | Andrew Plotkin, 1998 | .z5 | Inform 6 |
 
 ---
 
