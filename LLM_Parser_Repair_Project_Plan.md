@@ -166,7 +166,7 @@ Z-machine files contain embedded dictionary data:
 - Quantize model (4–8 bit) targeting <1s inference
 - Integrate via llama.cpp / MediaPipe LLM / GGUF runtime
 - Benchmark performance on representative Android hardware:
-  - Low-end: Snapdragon 665 (2019 mid-range)
+  - Low-end: Pixel 7a / Tensor G2 (8GB RAM)
   - Mid-range: Snapdragon 778G
   - High-end: Snapdragon 8 Gen 2
 - Validate accuracy preservation post-quantization
@@ -219,7 +219,7 @@ Z-machine files contain embedded dictionary data:
 - [ ] Synonym expansion uses only valid game verbs
 - [ ] `<NO_VALID_REWRITE>` returned for unsolvable commands
 - [ ] No information leakage about unseen rooms/objects
-- [ ] Latency <1s on low-end Android device
+- [ ] Latency <1s on Pixel 7a (Tensor G2)
 - [ ] Graceful degradation when model unavailable
 
 **Deliverables**
