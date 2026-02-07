@@ -16,6 +16,17 @@ private const val ANSI_CYAN = "\u001B[36m"
 private const val ANSI_GREEN = "\u001B[32m"
 private const val ANSI_RED = "\u001B[31m"
 
+/**
+ * Rewrite state machine for tracking retry attempts.
+ */
+private enum class RewriteState {
+    /** No retry in progress */
+    IDLE,
+
+    /** Waiting for game response to retry attempt */
+    AWAITING_RETRY_RESULT
+}
+
 fun main(args: Array<String>) {
     val flagsWithValues = setOf("--save-dir")
     val positional = mutableListOf<String>()
@@ -85,8 +96,9 @@ fun main(args: Array<String>) {
 
     // Setup LLM if requested
     val llmEnabled = "--llm" in flags
-    var lLmRewriter: LLMRewriter? = null
+    var llmRewriter: LLMRewriter? = null
     var vocabulary: Vocabulary? = null
+    var rewriteLogger: RewriteLogger? = null
 
     if (llmEnabled) {
         val apiKey = loadApiKey()
@@ -96,12 +108,15 @@ fun main(args: Array<String>) {
             return
         }
         println("${ANSI_CYAN}LLM rewriting enabled (Groq llama-3.1-8b-instant)$ANSI_RESET")
-        
+
         vocabulary = VocabularyExtractor.extract(gameFile)
         if (vocabulary != null) {
             println("${ANSI_CYAN}${vocabulary.getSummary()}$ANSI_RESET")
         }
-        lLmRewriter = LLMRewriter(apiKey)
+        llmRewriter = LLMRewriter(apiKey)
+
+        // Setup logger
+        rewriteLogger = RewriteLogger(gameFile.nameWithoutExtension)
     }
 
     val dfrotzPath = findDfrotz()
@@ -148,11 +163,11 @@ fun main(args: Array<String>) {
             var line = reader.readLine()
             while (line != null) {
                 lastCommand = line // Track for LLM
-                
+
                 processWriter.write(line)
                 processWriter.write("\n")
                 processWriter.flush()
-                
+
                 transcript?.appendLine("> $line")
                 line = reader.readLine()
             }
@@ -163,55 +178,110 @@ fun main(args: Array<String>) {
     try {
         val buffer = StringBuilder()
         var charCode = process.inputStream.read()
-        
+
         // Accumulate text since last prompt to detect errors
-        // NOTE: We only clear this when we've successfully processed a prompt or a command
         val outputAccumulator = StringBuilder()
+
+        // Rewrite state machine
+        var rewriteState = RewriteState.IDLE
+        var lastRewrite: String? = null
+        var lastOriginalCommand: String? = null
 
         while (charCode != -1) {
             val c = charCode.toChar()
             print(c)
-            
+
             outputAccumulator.append(c)
             buffer.append(c)
 
             // Prompt detection (ends with >)
             if (c == '>') {
-                // Check if it's likely a prompt 
-                // Z-machine prompts are usually "\n>" or just ">" at start
-                
-                if (llmEnabled && lLmRewriter != null && vocabulary != null) {
-                    val output = outputAccumulator.toString()
-                    
-                    // Simple logic: if we have an error pattern, try to rewrite
-                    if (lLmRewriter.hasError(output)) {
-                        // Attempt rewrite
-                        val originalCmd = lastCommand
-                        val rewrite = lLmRewriter.rewrite(originalCmd, output, vocabulary)
-                        
-                        if (rewrite != null) {
-                            // Print colorful rewrite notification
-                            println("\n\n  $ANSI_YELLOW[LLM Rewrite: \"$originalCmd\" -> \"$rewrite\"]$ANSI_RESET")
-                            ttsQueue?.add("Rewriting command to $rewrite")
-                            
-                            // Inject command output simulation
-                            println("> $rewrite") 
-                            
-                            processWriter.write(rewrite)
-                            processWriter.write("\n")
-                            processWriter.flush()
-                            
-                            lastCommand = rewrite
-                            transcript?.appendLine("[LLM Rewrite] > $rewrite")
+                val output = outputAccumulator.toString()
+
+                if (llmEnabled && llmRewriter != null && vocabulary != null && rewriteLogger != null) {
+                    when (rewriteState) {
+                        RewriteState.IDLE -> {
+                            // Check for parser error
+                            val failureInfo = ParserFailureDetector.detect(output)
+
+                            if (failureInfo != null && failureInfo.isRewritable) {
+                                // Attempt rewrite
+                                val originalCmd = lastCommand
+                                val rewrite = llmRewriter.rewrite(
+                                    originalCmd,
+                                    output,
+                                    failureInfo.type,
+                                    vocabulary
+                                )
+
+                                rewriteLogger.logRewriteAttempt(
+                                    originalCmd,
+                                    rewrite,
+                                    failureInfo.type,
+                                    output
+                                )
+
+                                if (rewrite != null) {
+                                    // Print colorful rewrite notification
+                                    println("\n\n  $ANSI_YELLOW[LLM Rewrite: \"$originalCmd\" -> \"$rewrite\"]$ANSI_RESET")
+                                    ttsQueue?.add("Rewriting command to $rewrite")
+
+                                    // Inject command output simulation
+                                    println("> $rewrite")
+
+                                    processWriter.write(rewrite)
+                                    processWriter.write("\n")
+                                    processWriter.flush()
+
+                                    lastCommand = rewrite
+                                    lastRewrite = rewrite
+                                    lastOriginalCommand = originalCmd
+                                    rewriteState = RewriteState.AWAITING_RETRY_RESULT
+                                    transcript?.appendLine("[LLM Rewrite] > $rewrite")
+                                }
+                            }
                         }
-                    } 
-                    // Reset accumulator after handling prompt
-                    outputAccumulator.clear()
-                } else {
-                     outputAccumulator.clear()
+
+                        RewriteState.AWAITING_RETRY_RESULT -> {
+                            // Check if retry succeeded or failed
+                            val failureInfo = ParserFailureDetector.detect(output)
+
+                            if (failureInfo != null && failureInfo.isRewritable) {
+                                // Retry also failed - show dual error display
+                                if (lastOriginalCommand != null && lastRewrite != null) {
+                                    println("\n  $ANSI_RED[Tried: \"$lastRewrite\" -> ${output.trim().take(100)}]$ANSI_RESET")
+
+                                    rewriteLogger.logRetryResult(
+                                        lastOriginalCommand,
+                                        lastRewrite,
+                                        success = false,
+                                        output
+                                    )
+                                }
+                            } else {
+                                // Retry succeeded!
+                                if (lastOriginalCommand != null && lastRewrite != null) {
+                                    rewriteLogger.logRetryResult(
+                                        lastOriginalCommand,
+                                        lastRewrite,
+                                        success = true,
+                                        output
+                                    )
+                                }
+                            }
+
+                            // Reset state
+                            rewriteState = RewriteState.IDLE
+                            lastRewrite = null
+                            lastOriginalCommand = null
+                        }
+                    }
                 }
+
+                // Reset accumulator after handling prompt
+                outputAccumulator.clear()
             }
-            
+
             // TTS and Transcript handling on lines
             if (c == '\n') {
                 val line = buffer.toString().trim()
@@ -228,6 +298,9 @@ fun main(args: Array<String>) {
 
     val exitCode = process.waitFor()
     ttsQueue?.shutdown()
+
+    // Flush rewrite log before exit
+    rewriteLogger?.flush()
 
     if (transcript != null) {
         val transcriptDir = File("${System.getProperty("user.home")}/.ifautofab/transcripts")
@@ -257,7 +330,7 @@ private fun loadApiKey(): String? {
             } catch (_: Exception) {}
         }
     }
-    
+
     // 2. Env var
     return System.getenv("GROQ_API_KEY")
 }
@@ -310,7 +383,7 @@ class TTSQueue {
         // Simple heuristics to avoid speaking non-text UI elements
         if (text.isBlank()) return
         if (text.startsWith("Score:") && text.contains("Moves:")) return // Skip Status bar
-        
+
         queue.offer(text)
     }
 
