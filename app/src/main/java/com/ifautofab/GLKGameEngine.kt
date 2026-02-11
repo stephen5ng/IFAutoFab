@@ -201,6 +201,14 @@ object GLKGameEngine {
     }
 
     fun sendInput(input: String) {
+        // Cancel any pending TTS and clear buffer when user sends a command
+        // This prevents old text from being spoken along with new text
+        ttsHandler.removeCallbacks(speakRunnable)
+        synchronized(ttsBuffer) {
+            ttsBuffer.clear()
+        }
+        ttsManager?.stop()
+
         // Skip parser processing for internal commands
         val isInternalCommand = input.equals("restore", ignoreCase = true) ||
                                input.equals("save", ignoreCase = true) ||
