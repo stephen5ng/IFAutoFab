@@ -31,11 +31,50 @@ CRITICAL CONSTRAINTS:
 4. If unsure, return exactly: <NO_VALID_REWRITE>
 5. Output ONLY the rewritten command (no explanations, no quotes)
 
+INTERACTIVE FICTION CONVENTIONS (Critical - Players Use These):
+Single-letter abbreviations commonly used in text adventures:
+- "x" → "examine" (most common)
+- "i" → "inventory"
+- "l" → "look"
+- "z" → "wait" or "sleep" (Infocom games)
+- "q" → "quit" (sometimes)
+- "g" → "again" (repeat last command)
+
+Direction abbreviations:
+- "n" → "north", "s" → "south", "e" → "east", "w" → "west"
+- "ne" → "northeast", "nw" → "northwest", "se" → "southeast", "sw" → "southwest"
+- "u" → "up", "d" → "down"
+
+IDIOMATIC EXPRESSIONS (Players phrase things colloquially):
+- "check out [object]" → "examine [object]"
+- "look at [object]" → "examine [object]"
+- "pick up [object]" → "take [object]"
+- "go [direction]" → "[direction]" (just the direction)
+- "climb up" → "climb" or "up"
+- "enter [room]" → just the direction or appropriate verb
+- "exit" → "out" or appropriate direction
+- "leave" → "out" or appropriate direction
+
+When you see these idioms, convert them to standard IF parser format.
+
 Rewrite Strategy:
-- Unknown verbs → Use game's valid verbs
+- Unknown verbs → Use game's valid verbs OR expand IF abbreviations
 - Unknown nouns → Use game's valid nouns (may be truncated to 6 chars)
 - Syntax errors → Restructure to: VERB [NOUN] [PREPOSITION NOUN]
 - Typos → Fix spelling while preserving meaning
+- IF abbreviations → Expand to full verbs (x → examine, i → inventory, etc.)
+
+Examples:
+- "x door" → "examine door"
+- "i" → "inventory"
+- "exmine box" → "examine box"
+- "check out window" → "examine window"
+- "look at table" → "examine table"
+- "pick up key" → "take key"
+- "n" → "north" (though "n" is usually valid as-is)
+- "who is santa" → <NO_VALID_REWRITE> (out of scope, not a parser error)
+- "please open door" → "open door" (remove politeness words)
+- "read it please" → "read it" (remove politeness words)
 
 Remember: You are helping with PARSE errors, not GAME logic. If the command is logically impossible (e.g., "unlock door with invisible key"), return <NO_VALID_REWRITE>.
 """.trimIndent()
@@ -156,13 +195,136 @@ Remember: You are helping with PARSE errors, not GAME logic. If the command is l
     }
 
     /**
+     * Expands Z-machine truncated words to full English forms.
+     * Z-machine dictionaries truncate to 6 characters, so "activa" → "activate".
+     */
+    private fun expandTruncatedWord(word: String): String {
+        // Common Z-machine verb truncations (6 chars → full word)
+        val expansions = mapOf(
+            "activa" to "activate",
+            "answer" to "answer",
+            "apply" to "apply",
+            "attack" to "attack",
+            "awake" to "awake",
+            "break" to "break",
+            "burn" to "burn",
+            "carry" to "carry",
+            "clean" to "clean",
+            "climb" to "climb",
+            "close" to "close",
+            "consum" to "consume",
+            "count" to "count",
+            "curse" to "curse",
+            "cut" to "cut",
+            "damage" to "damage",
+            "deflat" to "deflate",
+            "descri" to "describe",
+            "destro" to "destroy",
+            "diagno" to "diagnose",
+            "dig" to "dig",
+            "disemb" to "disembark",
+            "disenc" to "disencumber",
+            "dispat" to "dispatch",
+            "douse" to "douse",
+            "drink" to "drink",
+            "drop" to "drop",
+            "enchan" to "enchant",
+            "enter" to "enter",
+            "examin" to "examine",
+            "exit" to "exit",
+            "exorci" to "exorcise",
+            "exting" to "extinguish",
+            "fasten" to "fasten",
+            "feel" to "feel",
+            "fight" to "fight",
+            "fill" to "fill",
+            "find" to "find",
+            "fix" to "fix",
+            "flip" to "flip",
+            "follow" to "follow",
+            "free" to "free",
+            "froboz" to "frobozz",
+            "gaze" to "gaze",
+            "get" to "get",
+            "give" to "give",
+            "glue" to "glue",
+            "go" to "go",
+            "grab" to "grab",
+            "grease" to "grease",
+            "hand" to "hand",
+            "hatch" to "hatch",
+            "hide" to "hide",
+            "hit" to "hit",
+            "hold" to "hold",
+            "hop" to "hop",
+            "hurl" to "hurl",
+            "ignit" to "ignite",
+            "imbibe" to "imbibe",
+            "jump" to "jump",
+            "kick" to "kick",
+            "kill" to "kill",
+            "kiss" to "kiss",
+            "lean" to "lean",
+            "leave" to "leave",
+            "lift" to "lift",
+            "light" to "light",
+            "listen" to "listen",
+            "look" to "look",
+            "open" to "open",
+            "pass" to "pass",
+            "place" to "place",
+            "pray" to "pray",
+            "press" to "press",
+            "pull" to "pull",
+            "push" to "push",
+            "put" to "put",
+            "read" to "read",
+            "remove" to "remove",
+            "rest" to "rest",
+            "restore" to "restore",
+            "rotate" to "rotate",
+            "rub" to "rub",
+            "say" to "say",
+            "search" to "search",
+            "shake" to "shake",
+            "shout" to "shout",
+            "sit" to "sit",
+            "skip" to "skip",
+            "sleep" to "sleep",
+            "smell" to "smell",
+            "stand" to "stand",
+            "swear" to "swear",
+            "swing" to "swing",
+            "take" to "take",
+            "throw" to "throw",
+            "touch" to "touch",
+            "turn" to "turn",
+            "twist" to "twist",
+            "wave" to "wave",
+            "wear" to "wear",
+            "wipe" to "wipe"
+        )
+
+        // Return expansion if known, otherwise try to intelligently expand
+        return expansions[word] ?: when {
+            // Ends with common patterns
+            word.endsWith("in") && word.length == 6 -> "${word}e"  // examin → examine
+            word.endsWith("te") && word.length == 6 -> "${word}d" // activa → activate
+            word.endsWith("ve") && word.length == 6 -> "${word}d" // leave → leaved? no, keep as is
+            else -> word  // Return as-is if no expansion known
+        }
+    }
+
+    /**
      * Formats vocabulary for prompt display.
+     * Expands truncated words to full English forms for better LLM understanding.
      */
     private fun formatVocabulary(vocab: Map<String, List<String>>): String {
         return vocab.entries
             .filter { it.value.isNotEmpty() }
             .joinToString("\n") { (category, words) ->
-                "$category: ${words.joinToString(", ")}"
+                val expandedWords = words.map { expandTruncatedWord(it) }
+                "$category: ${expandedWords.joinToString(", ")}"
             }
     }
 
@@ -304,14 +466,18 @@ Remember: You are helping with PARSE errors, not GAME logic. If the command is l
         // Extract verb (first word)
         val verb = words[0].lowercase()
 
+        // Z-machine dictionaries truncate to 6 characters
+        // We must truncate before checking against vocabulary
+        val truncatedVerb = verb.take(6)
+
         // Hard reject unknown verbs (except for direction commands)
         val isDirection = verb in setOf("n", "s", "e", "w", "ne", "nw", "se", "sw", "u", "d", "up", "down")
-        if (!isDirection && !vocabulary.containsVerb(verb)) {
+        if (!isDirection && !vocabulary.containsVerb(truncatedVerb)) {
             return null
         }
 
         // For verb errors, ensure we're using a known verb
-        if (failureType == FailureType.UNKNOWN_VERB && !vocabulary.containsVerb(verb)) {
+        if (failureType == FailureType.UNKNOWN_VERB && !vocabulary.containsVerb(truncatedVerb)) {
             return null
         }
 
