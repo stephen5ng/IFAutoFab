@@ -29,6 +29,9 @@ class SherpaTTSManager(private val context: Context) {
     private var audioTrack: AudioTrack? = null
     private var currentVoiceId: Int = 0 // Default voice ID for Kokoro (0 = af_heart)
 
+    // Job to track current TTS operation for cancellation
+    private var currentSpeechJob: Job? = null
+
     companion object {
         private const val SAMPLE_RATE = 24000 // Standard TTS sample rate
 
@@ -150,18 +153,60 @@ class SherpaTTSManager(private val context: Context) {
     }
 
     /**
+     * Split text into sentences for chunked TTS processing.
+     * Splits on periods, newlines, and common punctuation.
+     */
+    private fun splitIntoSentences(text: String): List<String> {
+        val sentences = mutableListOf<String>()
+        val currentSentence = StringBuilder()
+
+        for (char in text) {
+            currentSentence.append(char)
+
+            // Split on sentence-ending punctuation
+            if (char == '.' || char == '!' || char == '?' || char == '\n') {
+                sentences.add(currentSentence.toString().trim())
+                currentSentence.clear()
+            } else if (char == ',') {
+                // Split on commas if followed by space (likely clause boundary)
+                if (currentSentence.length > 50) {
+                    sentences.add(currentSentence.toString().trim())
+                    currentSentence.clear()
+                } else if (currentSentence.length >= 200) {
+                    // Hard limit at 200 chars to prevent too-long sentences
+                    sentences.add(currentSentence.toString().trim())
+                    currentSentence.clear()
+                }
+            }
+        }
+
+        // Add remaining text
+        if (currentSentence.isNotEmpty()) {
+            sentences.add(currentSentence.toString().trim())
+        }
+
+        // Filter out empty sentences
+        return sentences.filter { it.isNotEmpty() }
+    }
+
+    /**
      * Speak text using Sherpa-ONNX TTS.
      * Thread-safe, queues if not ready.
      */
     fun speak(text: String) {
         if (text.isBlank()) return
 
+        // Cancel any previous TTS job immediately
+        currentSpeechJob?.cancel()
+        Log.d(tag, "Cancelled previous TTS job (if any)")
+
         // Read voice preference each time (may have changed in settings)
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val voiceName = prefs.getString("tts_voice", "af_heart") ?: "af_heart"
         val voiceId = AVAILABLE_VOICES.indexOf(voiceName).takeIf { it >= 0 } ?: 0
 
-        scope.launch {
+        // Start new TTS job
+        currentSpeechJob = scope.launch {
             // Update voice ID inside coroutine
             if (voiceId != currentVoiceId) {
                 currentVoiceId = voiceId
@@ -171,15 +216,35 @@ class SherpaTTSManager(private val context: Context) {
             when (val s = state) {
                 is State.Ready -> {
                     try {
-                        Log.d(tag, "Speaking: $text (voice: $voiceName, ID: $currentVoiceId)")
+                        // Split text into sentences for faster processing
+                        // This prevents long text blocks from taking too long
+                        val sentences = splitIntoSentences(text)
+                        Log.d(tag, "Split into ${sentences.size} sentences, total ${text.length} chars")
 
-                        // Generate speech audio
-                        // generate() returns GeneratedAudio object with sampleRate and samples
-                        val audio = s.engine.generate(text, currentVoiceId)
+                        for ((index, sentence) in sentences.withIndex()) {
+                            // Check if job was cancelled while processing
+                            ensureActive()
 
-                        // Play the audio
-                        playAudio(audio.sampleRate, audio.samples)
+                            Log.d(tag, "Speaking sentence ${index + 1}/${sentences.size}: ${sentence.take(50)}...")
+                            val startTime = System.currentTimeMillis()
 
+                            // Generate speech audio
+                            // generate() returns GeneratedAudio object with sampleRate and samples
+                            val audio = s.engine.generate(sentence, currentVoiceId)
+                            val generationTimeMs = System.currentTimeMillis() - startTime
+                            Log.d(tag, "TTS generation took ${generationTimeMs}ms for ${sentence.length} chars (${sentence.length.toFloat() * 1000 / generationTimeMs} chars/sec)")
+
+                            // Play the audio
+                            playAudio(audio.sampleRate, audio.samples)
+
+                            // Wait for audio to finish before processing next sentence
+                            val durationMs = ((audio.samples.size.toFloat() / SAMPLE_RATE) * 1000).toLong()
+                            val waitTimeMs = durationMs + 100  // Small gap between sentences
+                            delay(waitTimeMs)
+                        }
+
+                    } catch (e: CancellationException) {
+                        Log.d(tag, "TTS job cancelled by user")
                     } catch (e: Exception) {
                         Log.e(tag, "Speech generation error", e)
                     }
