@@ -50,6 +50,7 @@ fun main(args: Array<String>) {
         println("  --save-dir DIR  Set working directory for save files")
         println("                  (default: ~/.ifautofab/saves/)")
         println("  --dump-vocab    Extract and print vocabulary from game file")
+        println("  --dump-compiler Show Z-machine header and compiler fingerprint")
         println()
         println("Example:")
         println("  terminal --llm app/src/main/assets/games/zork1.z3")
@@ -90,6 +91,32 @@ fun main(args: Array<String>) {
                 println("${ANSI_GREEN}Other (${vocabulary.misc.size}):$ANSI_RESET")
                 vocabulary.misc.sorted().forEach { println("  $it") }
             }
+        }
+        return
+    }
+
+    // Handle --dump-compiler flag
+    if ("--dump-compiler" in flags) {
+        val header = ZMachineHeaderReader.readHeader(gameFile)
+        if (header != null) {
+            println("${ANSI_CYAN}Z-Machine Header Information${ANSI_RESET}")
+            println()
+            println("${ANSI_GREEN}File:${ANSI_RESET} ${gameFile.name}")
+            println("${ANSI_GREEN}Z-Machine Version:${ANSI_RESET} ${header.version}")
+            println("${ANSI_GREEN}Release Number:${ANSI_RESET} ${header.releaseNumber}")
+            println("${ANSI_GREEN}Serial Number:${ANSI_RESET} ${header.serialNumber}")
+            println("${ANSI_GREEN}Checksum:${ANSI_RESET} 0x${header.checksum.toString(16).uppercase().padStart(4, '0')}")
+            println()
+            println("${ANSI_GREEN}Compiler Family:${ANSI_RESET} ${header.compilerFamily}")
+            println()
+            when (header.compilerFamily) {
+                CompilerFamily.INFOCOM -> println("  Detected: Infocom game (ZIL compiler)")
+                CompilerFamily.INFORM_6 -> println("  Detected: Inform 6 game")
+                CompilerFamily.INFORM_7 -> println("  Detected: Inform 7 game")
+                CompilerFamily.UNKNOWN -> println("  Warning: Unknown compiler family")
+            }
+        } else {
+            println("${ANSI_RED}Failed to read Z-machine header${ANSI_RESET}")
         }
         return
     }

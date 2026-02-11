@@ -40,7 +40,18 @@ data class FailureInfo(
  * 1. Regex catalog for known compiler families (Infocom, Inform 6/7)
  * 2. Catch-all heuristic for unknown compilers
  *
+ * **Compiler family integration:** The regex catalog contains patterns from all three
+ * major compiler families (Infocom, Inform 6, Inform 7). While patterns could be
+ * selected based on detected compiler family (see ZMachineHeaderReader), the current
+ * approach applies all patterns universally. This is robust because:
+ * - Patterns are specific enough that they don't produce false positives across families
+ * - Some Inform games use custom parsers with Infocom-like error messages
+ * - Simpler implementation with minimal performance impact
+ *
+ * For future optimization, consider using compiler family to skip irrelevant patterns.
+ *
  * Reference: app/.../parser/ParserWrapper.kt error patterns (lines 241-283)
+ * See: ZMachineHeaderReader for compiler family detection
  */
 object ParserFailureDetector {
 
