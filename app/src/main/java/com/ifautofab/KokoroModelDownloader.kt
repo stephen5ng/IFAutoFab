@@ -75,8 +75,9 @@ class SherpaModelDownloader(private val context: Context) {
         val modelDir = File(context.filesDir, MODEL_DIR)
         modelDir.mkdirs()
 
-        // Download archive
-        val archiveFile = File(context.filesDir, "downloads/$ARCHIVE_NAME")
+        // Download archive to app's external files directory (scoped storage compatible)
+        val downloadDir = context.getExternalFilesDir(null)  // Returns /storage/emulated/0/Android/data/com.ifautofab/files/
+        val archiveFile = File(downloadDir, ARCHIVE_NAME)
         archiveFile.parentFile?.mkdirs()
 
         val request = DownloadManager.Request(Uri.parse(ARCHIVE_URL)).apply {
@@ -107,7 +108,10 @@ class SherpaModelDownloader(private val context: Context) {
             if (progress != null) {
                 // Map 0-100% download to 0-90% overall progress
                 val overallProgress = (progress * 0.9).toInt()
-                onProgress(overallProgress)
+                // Switch to Main thread to update UI
+                withContext(Dispatchers.Main) {
+                    onProgress(overallProgress)
+                }
 
                 if (progress >= 100) {
                     downloadId = null
@@ -118,20 +122,28 @@ class SherpaModelDownloader(private val context: Context) {
 
         // Extraction phase (90-100%)
         isExtracting = true
-        onProgress(90)
+        withContext(Dispatchers.Main) {
+            onProgress(90)
+        }
 
         try {
             extractArchive(archiveFile, File(context.filesDir, MODEL_DIR))
-            onProgress(100)
+            withContext(Dispatchers.Main) {
+                onProgress(100)
+            }
 
             // Verify files
             val success = verifyRequiredFiles()
-            onComplete(success)
+            withContext(Dispatchers.Main) {
+                onComplete(success)
+            }
 
             // Clean up archive
             archiveFile.delete()
         } catch (e: Exception) {
-            onComplete(false)
+            withContext(Dispatchers.Main) {
+                onComplete(false)
+            }
         } finally {
             isExtracting = false
         }
